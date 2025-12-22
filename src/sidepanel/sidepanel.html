@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A-Task 任务管理</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <header class="header">
+      <h1 id="panelTitle" class="panel-title">A-Task 任务队列</h1>
+      <button id="addTaskBtn" class="btn-primary">+ 添加任务</button>
+    </header>
+
+    <!-- 调试信息区域 -->
+    <div class="debug-panel" id="debugPanel">
+      <div class="debug-header">
+        <span class="debug-title">📊 执行状态</span>
+        <button id="toggleDebugBtn" class="debug-toggle">收起</button>
+      </div>
+      <div class="debug-content" id="debugContent">
+        <div class="debug-empty">等待任务执行...</div>
+      </div>
+    </div>
+
+    <!-- 任务列表 -->
+    <div class="task-list" id="taskList">
+      <div class="empty-state" id="emptyState">
+        <p>暂无任务</p>
+        <p class="empty-hint">点击上方按钮添加第一个任务</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加任务浮层 -->
+  <div class="modal" id="addTaskModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>添加新任务</h2>
+        <button class="close-btn" id="closeModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="siteSelect">目标网站</label>
+          <select id="siteSelect" class="form-control">
+            <option value="gemini">Gemini</option>
+            <option value="chatgpt" disabled>ChatGPT (即将支持)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="taskTypeSelect">任务类型</label>
+          <select id="taskTypeSelect" class="form-control">
+            <option value="text">文本对话</option>
+            <option value="image">图片生成</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="promptInput">提示词</label>
+          <textarea
+            id="promptInput"
+            class="form-control"
+            rows="6"
+            placeholder="请输入提示词内容..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="maxRetriesInput">最大重试次数</label>
+          <input
+            type="number"
+            id="maxRetriesInput"
+            class="form-control"
+            value="3"
+            min="0"
+            max="10">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelBtn" class="btn-secondary">取消</button>
+        <button id="submitTaskBtn" class="btn-primary">添加任务</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>
