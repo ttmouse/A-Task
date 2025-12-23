@@ -40,6 +40,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'TASK_STATUS_UPDATE':
       handleTaskStatusUpdate(message.taskId, message.status);
+      broadcastPageStatus(message.status, message.taskId, 'task');
       break;
 
     case 'OPEN_EXTENSION_PAGE':
@@ -49,6 +50,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'DEBUG_LOG':
       // 转发调试日志到侧边栏
       forwardDebugLog(message);
+      break;
+
+    case 'CHECK_CONTENT_SCRIPT':
+      // 检测 content script 是否就绪
+      handleCheckContentScript().then(sendResponse);
+      return true; // 异步响应
+
+    case 'MANUAL_INJECT':
+      // 手动注入 content script
+      handleManualInject().then(sendResponse);
+      return true; // 异步响应
+
+    case 'REQUEST_PAGE_STATUS':
+      handleRequestPageStatus().then(sendResponse);
+      return true; // 异步响应
+
+    case 'PING':
+      // PING 响应 - content script 确认在线
+      sendResponse({ pong: true });
       break;
   }
 });
@@ -106,6 +126,117 @@ async function forwardDebugLog(message: any) {
 }
 
 /**
+ * 检测 content script 是否就绪
+ */
+async function handleCheckContentScript(): Promise<{ connected: boolean }> {
+  try {
+    // 尝试找到 Gemini 标签页
+    const tabs = await chrome.tabs.query({ url: 'https://gemini.google.com/*' });
+
+    if (tabs.length === 0 || !tabs[0].id) {
+      return { connected: false };
+    }
+
+    const tabId = tabs[0].id;
+
+    // 发送 PING 消息，短超时
+    try {
+      const response = await Promise.race([
+        chrome.tabs.sendMessage(tabId, { type: 'PING' }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000))
+      ]);
+
+      return { connected: response && (response as any).pong === true };
+    } catch (error) {
+      return { connected: false };
+    }
+  } catch (error) {
+    return { connected: false };
+  }
+}
+
+/**
+ * 手动注入 content script
+ */
+async function handleManualInject(): Promise<{ success: boolean; error?: string }> {
+  try {
+    // 查找 Gemini 标签页
+    const tabs = await chrome.tabs.query({ url: 'https://gemini.google.com/*' });
+
+    if (tabs.length === 0 || !tabs[0].id) {
+      return {
+        success: false,
+        error: '未找到 Gemini 页面，请先打开 https://gemini.google.com'
+      };
+    }
+
+    const tabId = tabs[0].id;
+
+    // 手动注入 content script
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['content-gemini.js']
+    });
+
+    console.log('[Background] Content script 已手动注入');
+
+    // 等待一下让 content script 初始化
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // 验证注入是否成功
+    const checkResult = await handleCheckContentScript();
+
+    if (checkResult.connected) {
+      return { success: true };
+    } else {
+      return {
+        success: false,
+        error: '注入后仍无法连接，请刷新页面重试'
+      };
+    }
+
+  } catch (error) {
+    console.error('[Background] 手动注入失败:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '注入失败'
+    };
+  }
+}
+
+/**
+ * 手动检测页面状态
+ */
+async function handleRequestPageStatus(): Promise<{ success: boolean; status?: TaskStatus; error?: string }> {
+  try {
+    // 优先使用当前任务的站点，否则默认 Gemini
+    const targetSite = currentTask?.siteType || SiteType.GEMINI;
+
+    const response = await sendMessageToContentScript(targetSite, {
+      type: 'CHECK_STATUS'
+    });
+
+    if (response?.status) {
+      broadcastPageStatus(response.status, currentTask?.id || null, 'manual');
+      return {
+        success: true,
+        status: response.status
+      };
+    }
+
+    return {
+      success: false,
+      error: '无法读取页面状态'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '检测失败'
+    };
+  }
+}
+
+/**
  * 处理开始任务
  */
 async function handleStartTask(taskId: string) {
@@ -123,10 +254,10 @@ async function handleStartTask(taskId: string) {
 }
 
 /**
- * 处理停止任务
+ * 处理停止任务（暂停）
  */
 async function handleStopTask(taskId: string) {
-  console.log('[Background] 停止任务:', taskId);
+  console.log('[Background] 暂停任务:', taskId);
 
   if (currentTask?.id === taskId) {
     // 通知 content script 停止
@@ -134,15 +265,18 @@ async function handleStopTask(taskId: string) {
       type: 'STOP_TASK'
     });
 
-    // 更新任务状态为待执行
+    // AIDEV-NOTE: 暂停任务 - 保持当前进度
+    // 任务状态改回 PENDING，保持 currentStepIndex 不变
+    // 这样用户可以通过"开始"按钮继续执行
     await TaskStorage.updateTask(taskId, {
       status: TaskStatus.PENDING
     });
 
     currentTask = null;
 
-    // 尝试执行下一个任务
-    await executeNextTask();
+    // AIDEV-NOTE: 暂停后不自动执行下一个任务
+    // 用户需要手动点击"开始"按钮来继续执行任务
+    console.log('[Background] 任务已暂停，不会自动执行下一个任务');
   }
 }
 
@@ -152,19 +286,88 @@ async function handleStopTask(taskId: string) {
 async function handleTaskStatusUpdate(taskId: string, status: TaskStatus) {
   console.log('[Background] 任务状态更新:', taskId, status);
 
-  await TaskStorage.updateTask(taskId, {
-    status,
-    ...(status === TaskStatus.COMPLETED && { completedAt: Date.now() })
-  });
+  // AIDEV-NOTE: 支持多步骤任务
+  // 如果任务完成，检查是否有下一步
+  if (status === TaskStatus.COMPLETED && currentTask?.id === taskId) {
+    console.log('[Background] 步骤完成，检查是否有下一步');
 
-  // 如果任务完成或失败
-  if (status === TaskStatus.COMPLETED) {
+    // 检查任务是否有多步骤
+    const tasks = await TaskStorage.getAllTasks();
+    const task = tasks.find(t => t.id === taskId);
+
+    if (task?.steps && task.steps.length > 1) {
+      // 更新当前步骤状态
+      const currentStepIndex = task.currentStepIndex || 0;
+      await TaskStorage.updateStepStatus(taskId, currentStepIndex, TaskStatus.COMPLETED);
+
+      // 检查是否有下一步
+      const hasNextStep = await TaskStorage.moveToNextStep(taskId);
+
+      if (hasNextStep) {
+        console.log('[Background] 开始执行下一步:', currentStepIndex + 1);
+
+        // 等待一小段时间，让 content script 完成清理
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // 获取更新后的任务
+        const updatedTasks = await TaskStorage.getAllTasks();
+        const updatedTask = updatedTasks.find(t => t.id === taskId);
+
+        if (updatedTask) {
+          // 继续执行下一步（不需要更新 currentTask，因为还是同一个任务）
+          try {
+            // 发送任务到 content script
+            const response = await sendMessageToContentScript(updatedTask.siteType, {
+              type: 'SUBMIT_TASK',
+              task: updatedTask
+            });
+
+            if (!response?.success) {
+              throw new Error(response?.error || '提交下一步失败');
+            }
+
+            console.log('[Background] 下一步已提交');
+          } catch (error) {
+            console.error('[Background] 执行下一步失败:', error);
+            await TaskStorage.updateTask(taskId, {
+              status: TaskStatus.FAILED,
+              error: error instanceof Error ? error.message : '执行下一步失败'
+            });
+            currentTask = null;
+            await handleTaskFailure(taskId);
+          }
+        }
+        return;
+      }
+
+      // 所有步骤都完成了
+      console.log('[Background] 所有步骤已完成');
+    }
+
+    // 更新整个任务为完成状态
+    await TaskStorage.updateTask(taskId, {
+      status: TaskStatus.COMPLETED,
+      completedAt: Date.now()
+    });
+
     console.log('[Background] 任务完成:', taskId);
     currentTask = null;
     await executeNextTask();
+
   } else if (status === TaskStatus.FAILED) {
+    // 更新任务状态
+    await TaskStorage.updateTask(taskId, {
+      status
+    });
+
     console.log('[Background] 任务失败:', taskId);
     await handleTaskFailure(taskId);
+
+  } else {
+    // 其他状态更新
+    await TaskStorage.updateTask(taskId, {
+      status
+    });
   }
 }
 
@@ -357,4 +560,26 @@ async function sendMessageToContentScript(siteType: SiteType, message: any, retr
       }
     }
   }
+}
+
+/**
+ * 广播页面状态到所有可见页面（例如侧边栏）
+ */
+function broadcastPageStatus(
+  status: TaskStatus,
+  taskId: string | null,
+  source: 'task' | 'manual'
+): void {
+  chrome.runtime.sendMessage({
+    type: 'PAGE_STATUS_UPDATE',
+    status,
+    taskId,
+    source,
+    timestamp: Date.now()
+  }, () => {
+    // 忽略没有接收方时的错误
+    if (chrome.runtime.lastError) {
+      console.debug('[Background] 广播页面状态时无接收方:', chrome.runtime.lastError.message);
+    }
+  });
 }

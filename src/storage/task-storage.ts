@@ -1,7 +1,13 @@
+// INPUT: ../types/task.js (Task, TaskStatus), chrome.storage.local API
+// OUTPUT: TaskStorage 类，提供任务存储的静态方法（getAllTasks, saveTasks, addTask, updateTask 等）
+// POS: 存储层，封装 chrome.storage.local API，被 TaskExecutor、background.ts 等模块调用
+// 一旦本文件被修改，请更新此注释并同步更新 /src/storage/README.md
+
 import { Task, TaskStatus } from '../types/task.js';
 
 // AIDEV-NOTE: 使用 chrome.storage.local 持久化任务队列
 // 数据结构: { tasks: Task[], config: TaskQueueConfig }
+// 支持多步骤任务管理
 
 const STORAGE_KEY = 'a-task-queue';
 
@@ -60,5 +66,96 @@ export class TaskStorage {
   static async getNextPendingTask(): Promise<Task | null> {
     const tasks = await this.getAllTasks();
     return tasks.find(t => t.status === TaskStatus.PENDING) || null;
+  }
+
+  /**
+   * AIDEV-NOTE: 更新当前步骤状态
+   * @param taskId 任务ID
+   * @param stepIndex 步骤索引
+   * @param status 步骤状态
+   * @param error 错误信息（可选）
+   */
+  static async updateStepStatus(
+    taskId: string,
+    stepIndex: number,
+    status: TaskStatus,
+    error?: string
+  ): Promise<void> {
+    const tasks = await this.getAllTasks();
+    const task = tasks.find(t => t.id === taskId);
+
+    if (task && task.steps && task.steps[stepIndex]) {
+      task.steps[stepIndex].status = status;
+      if (error) {
+        task.steps[stepIndex].error = error;
+      }
+
+      if (status === TaskStatus.RUNNING) {
+        task.steps[stepIndex].startedAt = Date.now();
+      } else if (status === TaskStatus.COMPLETED || status === TaskStatus.FAILED) {
+        task.steps[stepIndex].completedAt = Date.now();
+      }
+
+      await this.saveTasks(tasks);
+    }
+  }
+
+  /**
+   * AIDEV-NOTE: 移动到下一个步骤
+   * @param taskId 任务ID
+   * @returns 是否成功移动（如果没有下一步则返回 false）
+   */
+  static async moveToNextStep(taskId: string): Promise<boolean> {
+    const tasks = await this.getAllTasks();
+    const task = tasks.find(t => t.id === taskId);
+
+    if (!task || !task.steps) {
+      return false;
+    }
+
+    const currentIndex = task.currentStepIndex || 0;
+    const nextIndex = currentIndex + 1;
+
+    // 检查是否还有下一步
+    if (nextIndex >= task.steps.length) {
+      return false;
+    }
+
+    // 更新到下一步
+    task.currentStepIndex = nextIndex;
+    await this.saveTasks(tasks);
+    return true;
+  }
+
+  /**
+   * AIDEV-NOTE: 检查任务的所有步骤是否都已完成
+   * @param taskId 任务ID
+   * @returns 所有步骤是否完成
+   */
+  static async areAllStepsCompleted(taskId: string): Promise<boolean> {
+    const tasks = await this.getAllTasks();
+    const task = tasks.find(t => t.id === taskId);
+
+    if (!task || !task.steps) {
+      return false;
+    }
+
+    return task.steps.every(step => step.status === TaskStatus.COMPLETED);
+  }
+
+  /**
+   * AIDEV-NOTE: 检查是否有步骤失败
+   * @param taskId 任务ID
+   * @returns 是否有失败的步骤
+   */
+  static async hasFailedStep(taskId: string): Promise<boolean> {
+    const tasks = await this.getAllTasks();
+    const task = tasks.find(t => t.id === taskId);
+
+    if (!task || !task.steps) {
+      return false;
+    }
+
+    return task.steps.some(step => step.status === TaskStatus.FAILED);
   }
 }

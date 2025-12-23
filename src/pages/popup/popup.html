@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A-Task</title>
+  <link rel="stylesheet" href="popup.css">
+  <!-- Remix Icon -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+</head>
+<body>
+  <!-- 头部 -->
+  <header class="header">
+    <div class="logo">
+      <i class="ri-task-line"></i>
+      <h1>A-Task</h1>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="settingsBtn" title="设置">
+        <i class="ri-settings-3-line"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- 任务列表 -->
+  <main class="main">
+    <div class="task-list" id="taskList">
+      <!-- 任务列表将在这里动态渲染 -->
+      <div class="empty-state">
+        <i class="ri-inbox-line"></i>
+        <p>暂无任务</p>
+        <small>点击下方按钮添加新任务</small>
+      </div>
+    </div>
+  </main>
+
+  <!-- 底部操作栏 -->
+  <footer class="footer">
+    <button class="btn btn-primary" id="addTaskBtn">
+      <i class="ri-add-line"></i>
+      添加任务
+    </button>
+
+    <button class="btn btn-secondary" id="guideBtn">
+      <i class="ri-book-open-line"></i>
+      使用指南
+    </button>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

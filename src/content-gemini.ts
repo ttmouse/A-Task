@@ -25,6 +25,12 @@ let statusCheckInterval: number | null = null;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Content-Gemini] 收到消息:', message);
 
+  if (message.type === 'PING') {
+    // PING/PONG 机制 - 确认 content script 已就绪
+    sendResponse({ pong: true });
+    return;
+  }
+
   if (message.type === 'SUBMIT_TASK') {
     handleSubmitTask(message.task).then(sendResponse);
     return true; // 异步响应

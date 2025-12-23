@@ -8,7 +8,8 @@
     "sidePanel",
     "activeTab",
     "tabs",
-    "management"
+    "management",
+    "scripting"
   ],
   "host_permissions": [
     "https://gemini.google.com/*"
@@ -30,6 +31,19 @@
   "action": {
     "default_title": "A-Task 任务管理器"
   },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "markdown/guide.md",
+        "utils/markdown-renderer.js",
+        "pages/sidepanel/sidepanel.html",
+        "pages/sidepanel/sidepanel.js",
+        "pages/sidepanel/sidepanel.css",
+        "pages/guide-simple.html"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",

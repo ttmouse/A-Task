@@ -11,8 +11,39 @@
     <!-- 头部 -->
     <header class="header">
       <h1 id="panelTitle" class="panel-title">A-Task 任务队列</h1>
-      <button id="addTaskBtn" class="btn-primary">+ 添加任务</button>
+      <div class="header-actions">
+        <button id="guideBtn" class="btn-secondary" title="查看使用指南">
+          📖 使用指南
+        </button>
+        <button id="addTaskBtn" class="btn-primary">+ 添加任务</button>
+      </div>
     </header>
+
+    <!-- 连接状态指示器 -->
+    <div class="connection-status" id="connectionStatus">
+      <div class="status-indicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">检测中...</span>
+      </div>
+      <button id="manualInjectBtn" class="btn-inject" style="display: none;">
+        🔧 手动注入
+      </button>
+    </div>
+
+    <!-- 页面状态监控 -->
+    <div class="page-status" id="pageStatus">
+      <div class="status-indicator">
+        <span class="status-dot page-dot page-idle" id="pageStatusDot"></span>
+        <div class="status-info">
+          <span class="status-label">页面状态</span>
+          <span class="status-text" id="pageStatusText">等待任务</span>
+          <span class="status-detail" id="pageStatusDetail">尚未收到来自页面的状态</span>
+        </div>
+      </div>
+      <button id="checkPageStatusBtn" class="btn-secondary btn-compact">
+        🔍 手动检测
+      </button>
+    </div>
 
     <!-- 调试信息区域 -->
     <div class="debug-panel" id="debugPanel">
@@ -34,14 +65,17 @@
     </div>
   </div>
 
-  <!-- 添加任务浮层 -->
+  <!-- 添加/编辑任务浮层 -->
   <div class="modal" id="addTaskModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>添加新任务</h2>
+        <h2 id="modalTitle">添加新任务</h2>
         <button class="close-btn" id="closeModalBtn">&times;</button>
       </div>
       <div class="modal-body">
+        <!-- 隐藏字段：正在编辑的任务 ID -->
+        <input type="hidden" id="editingTaskId" value="">
+
         <div class="form-group">
           <label for="siteSelect">目标网站</label>
           <select id="siteSelect" class="form-control">
@@ -57,12 +91,15 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="promptInput">提示词</label>
+          <label for="promptInput">
+            提示词
+            <span style="color: #666; font-size: 12px;">(使用 -------- 分隔多个步骤)</span>
+          </label>
           <textarea
             id="promptInput"
             class="form-control"
-            rows="6"
-            placeholder="请输入提示词内容..."></textarea>
+            rows="8"
+            placeholder="请输入提示词内容...&#10;&#10;提示：使用 -------- 分隔多个步骤，任务将逐步执行"></textarea>
         </div>
         <div class="form-group">
           <label for="maxRetriesInput">最大重试次数</label>
