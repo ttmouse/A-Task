@@ -19,40 +19,28 @@
       </div>
     </header>
 
-    <!-- 连接状态指示器 -->
-    <div class="connection-status" id="connectionStatus">
-      <div class="status-indicator">
-        <span class="status-dot" id="statusDot"></span>
-        <span class="status-text" id="statusText">检测中...</span>
-      </div>
-      <button id="manualInjectBtn" class="btn-inject" style="display: none;">
-        🔧 手动注入
-      </button>
-    </div>
-
-    <!-- 页面状态监控 -->
-    <div class="page-status" id="pageStatus">
-      <div class="status-indicator">
-        <span class="status-dot page-dot page-idle" id="pageStatusDot"></span>
-        <div class="status-info">
-          <span class="status-label">页面状态</span>
-          <span class="status-text" id="pageStatusText">等待任务</span>
-          <span class="status-detail" id="pageStatusDetail">尚未收到来自页面的状态</span>
+    <!-- 状态栏 -->
+    <div class="status-bar">
+      <div class="status-items">
+        <div class="status-item" id="connectionStatusItem">
+          <span class="status-label">连接</span>
+          <span class="status-dot" id="statusConnectionDot"></span>
+          <span class="status-value" id="statusConnectionText">检测中</span>
+        </div>
+        <div class="status-item" id="pageStatusItem">
+          <span class="status-label">页面</span>
+          <span class="status-dot" id="statusPageDot"></span>
+          <span class="status-value" id="statusPageText">等待状态</span>
+        </div>
+        <div class="status-item" id="inputStatusItem">
+          <span class="status-label">输入</span>
+          <span class="status-dot" id="statusInputDot"></span>
+          <span class="status-value" id="statusInputText">未知</span>
         </div>
       </div>
-      <button id="checkPageStatusBtn" class="btn-secondary btn-compact">
-        🔍 手动检测
-      </button>
-    </div>
-
-    <!-- 调试信息区域 -->
-    <div class="debug-panel" id="debugPanel">
-      <div class="debug-header">
-        <span class="debug-title">📊 执行状态</span>
-        <button id="toggleDebugBtn" class="debug-toggle">收起</button>
-      </div>
-      <div class="debug-content" id="debugContent">
-        <div class="debug-empty">等待任务执行...</div>
+      <div class="status-actions">
+        <button id="checkPageStatusBtn" class="status-action" title="手动检测页面状态">🔍</button>
+        <button id="manualInjectBtn" class="status-action" title="手动注入 Content Script">🔧</button>
       </div>
     </div>
 
@@ -61,6 +49,16 @@
       <div class="empty-state" id="emptyState">
         <p>暂无任务</p>
         <p class="empty-hint">点击上方按钮添加第一个任务</p>
+      </div>
+    </div>
+
+    <!-- 日志区域 -->
+    <div class="log-panel" id="logPanel">
+      <div class="log-header">
+        <span>📜 执行日志</span>
+      </div>
+      <div class="log-content" id="debugContent">
+        <div class="log-empty">等待日志...</div>
       </div>
     </div>
   </div>

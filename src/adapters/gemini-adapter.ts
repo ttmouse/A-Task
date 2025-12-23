@@ -6,6 +6,8 @@
 import { BaseAdapter } from './base-adapter.js';
 import { TaskStatus } from '../types/task.js';
 
+type InputState = 'unknown' | 'idle' | 'ready' | 'waiting' | 'busy' | 'error' | 'blocked';
+
 // AIDEV-NOTE: Gemini 适配器实现
 // 需要根据实际页面结构调整选择器和监控逻辑
 
@@ -34,11 +36,24 @@ export class GeminiAdapter extends BaseAdapter {
    */
   async submitContent(content: string): Promise<boolean> {
     try {
+      this.sendDebugLog('info', '🔍 检查页面是否空闲...');
+      this.notifyInputStatus('waiting', '等待页面空闲');
+      const isIdle = await this.waitForPageIdle();
+      if (!isIdle) {
+        this.sendDebugLog('error', '❌ 页面一直处于生成状态，暂时无法提交新任务');
+         this.notifyInputStatus('blocked', '页面仍在生成，暂无法输入');
+        return false;
+      }
+
+      this.sendDebugLog('success', '✅ 页面空闲，开始准备提交任务');
+      this.notifyInputStatus('ready', '页面空闲，准备输入内容');
+
       // 查找输入框
       this.sendDebugLog('info', '🔍 正在查找输入框...');
       const inputBox = document.querySelector(GeminiAdapter.SELECTORS.inputBox) as HTMLElement;
       if (!inputBox) {
         this.sendDebugLog('error', '❌ 找不到输入框，请检查选择器');
+        this.notifyInputStatus('error', '找不到输入框');
         throw new Error('找不到 Gemini 输入框');
       }
       this.sendDebugLog('success', '✅ 输入框定位成功');
@@ -63,18 +78,21 @@ export class GeminiAdapter extends BaseAdapter {
       const submitButton = document.querySelector(GeminiAdapter.SELECTORS.submitButton) as HTMLButtonElement;
       if (!submitButton) {
         this.sendDebugLog('error', '❌ 找不到提交按钮，请检查选择器');
+        this.notifyInputStatus('error', '找不到提交按钮');
         throw new Error('找不到 Gemini 提交按钮');
       }
 
       // 检查按钮是否可用
       if (submitButton.disabled || submitButton.getAttribute('aria-disabled') === 'true') {
         this.sendDebugLog('warning', '⚠️ 提交按钮不可用，可能输入内容为空');
+        this.notifyInputStatus('blocked', '提交按钮不可用');
         throw new Error('提交按钮不可用，可能输入内容为空');
       }
 
       this.sendDebugLog('success', '✅ 提交按钮定位成功');
       submitButton.click();
       this.sendDebugLog('success', '✅ 已点击提交按钮');
+      this.notifyInputStatus('busy', '任务已提交，等待 Gemini 响应');
 
       // 如果是多步骤任务，记录当前步骤
       const stepInfo = this.isMultiStepTask()
@@ -101,6 +119,9 @@ export class GeminiAdapter extends BaseAdapter {
   private mutationObserver: MutationObserver | null = null;
   private lastMutationTime = 0;
   private completionCheckTimer: number | null = null;
+  private hasSeenBusyState = false;
+  private currentInputState: InputState = 'unknown';
+  private lastInputDetail?: string;
 
   /**
    * 发送调试日志
@@ -110,6 +131,22 @@ export class GeminiAdapter extends BaseAdapter {
       type: 'DEBUG_LOG',
       level,
       message
+    });
+  }
+
+  private notifyInputStatus(state: InputState, detail?: string) {
+    const normalizedDetail = detail || '';
+    if (this.currentInputState === state && normalizedDetail === (this.lastInputDetail || '')) {
+      return;
+    }
+    this.currentInputState = state;
+    this.lastInputDetail = normalizedDetail || undefined;
+
+    chrome.runtime.sendMessage({
+      type: 'INPUT_STATUS_UPDATE',
+      state,
+      detail,
+      timestamp: Date.now()
     });
   }
 
@@ -149,7 +186,7 @@ export class GeminiAdapter extends BaseAdapter {
         return TaskStatus.RUNNING;
       }
 
-      // 2. 检查发送按钮容器状态（新增 - 更可靠）
+      // 2. 检查发送按钮容器的可见状态（用于日志）
       const submitButtonContainer = document.querySelector(GeminiAdapter.SELECTORS.submitButtonContainer);
       if (!submitButtonContainer) {
         this.sendDebugLog('warning', '⚠️ 找不到发送按钮容器，继续等待...');
@@ -157,22 +194,20 @@ export class GeminiAdapter extends BaseAdapter {
         return TaskStatus.RUNNING;
       }
 
-      // 检查容器是否有 'disabled' class（表示不可用）
-      const containerDisabled = submitButtonContainer.classList.contains('disabled');
-      if (containerDisabled) {
-        this.sendDebugLog('info', '⏳ 发送按钮容器标记为 disabled，继续等待...');
+      // 3. 检查页面是否仍有其他“忙碌”迹象（不依赖按钮 disabled）
+      const busyState = this.detectPageBusyState(false);
+      if (busyState.busy) {
+        this.hasSeenBusyState = true;
+        this.sendDebugLog('info', busyState.detail || '⏳ 检测到页面仍在生成，继续等待...');
         this.buttonStableCount = 0;
         return TaskStatus.RUNNING;
       }
 
-      // 3. 检查按钮的 aria-disabled 属性
-      const isButtonDisabled = submitButton.disabled ||
-                               submitButton.getAttribute('aria-disabled') === 'true';
-
-      if (isButtonDisabled) {
-        this.sendDebugLog('info', '⏳ 发送按钮 aria-disabled="true"，继续等待...');
-        this.buttonStableCount = 0;
-        return TaskStatus.RUNNING;
+      if (this.hasSeenBusyState) {
+        this.sendDebugLog('success', '🎉 检测到页面空闲，判定任务完成');
+        this.stopMonitoring();
+        this.notifyInputStatus('idle', '任务完成，页面空闲');
+        return TaskStatus.COMPLETED;
       }
 
       // AIDEV-NOTE: 第三层检测 - 检查响应文本的稳定性
@@ -209,7 +244,7 @@ export class GeminiAdapter extends BaseAdapter {
         // - 文本连续 5 次稳定（10秒，从6秒增加到10秒）
         // - 按钮连续 5 次可用（10秒，从6秒增加到10秒）
         // - 停止按钮已消失（最关键的检查）
-        // - 按钮容器没有 disabled class
+        // - 最终确认发送按钮本身是可点击状态
         if (this.buttonStableCount >= 5) {
           // 最后多重确认
           const finalStopButtonCheck = document.querySelector(GeminiAdapter.SELECTORS.stopButton);
@@ -220,10 +255,9 @@ export class GeminiAdapter extends BaseAdapter {
             return TaskStatus.RUNNING;
           }
 
-          // 再次确认容器状态
-          const finalContainerCheck = document.querySelector(GeminiAdapter.SELECTORS.submitButtonContainer);
-          if (finalContainerCheck?.classList.contains('disabled')) {
-            this.sendDebugLog('warning', '⚠️ 最后检查发现按钮容器仍为 disabled，重置计数器');
+          // 再次确认按钮可用状态
+          if (submitButton.disabled || submitButton.getAttribute('aria-disabled') === 'true') {
+            this.sendDebugLog('warning', '⚠️ 最后检查发现发送按钮仍被禁用，重置计数器');
             this.buttonStableCount = 0;
             this.stableCheckCount = 0;
             return TaskStatus.RUNNING;
@@ -232,6 +266,7 @@ export class GeminiAdapter extends BaseAdapter {
           const ariaLabel = submitButton.getAttribute('aria-label');
           this.sendDebugLog('success', `🎉 生成完成确认！发送按钮 (${ariaLabel}) 已稳定可用，文本已停止增长，停止按钮已消失`);
           this.stopMonitoring();
+          this.notifyInputStatus('idle', '任务完成，页面空闲');
           return TaskStatus.COMPLETED;
         }
       }
@@ -276,6 +311,7 @@ export class GeminiAdapter extends BaseAdapter {
     this.stableCheckCount = 0;
     this.buttonStableCount = 0;  // 重置按钮稳定计数器
     this.lastMutationTime = Date.now();
+    this.hasSeenBusyState = false;
 
     // 查找响应容器
     const messagesContainer = document.querySelector(GeminiAdapter.SELECTORS.messagesContainer);
@@ -397,6 +433,61 @@ export class GeminiAdapter extends BaseAdapter {
   }
 
   /**
+   * 检测页面是否仍在生成
+   */
+  private detectPageBusyState(includeStopButton = true): { busy: boolean; detail?: string } {
+    if (includeStopButton) {
+      const stopButton = document.querySelector(GeminiAdapter.SELECTORS.stopButton);
+      if (stopButton) {
+        const label = stopButton.getAttribute('aria-label');
+        return {
+          busy: true,
+          detail: label ? `检测到“${label}”按钮，说明 Gemini 正在生成中` : '检测到“停止回答”按钮，Gemini 正在生成中'
+        };
+      }
+    }
+    const loadingIndicator = document.querySelector(GeminiAdapter.SELECTORS.loadingIndicator) as HTMLElement | null;
+    if (loadingIndicator) {
+      const styles = window.getComputedStyle(loadingIndicator);
+      if (styles.display !== 'none' && styles.visibility !== 'hidden' && styles.opacity !== '0') {
+        return {
+          busy: true,
+          detail: '检测到加载指示器，Gemini 正在生成响应'
+        };
+      }
+    }
+
+    return { busy: false };
+  }
+
+  /**
+   * 等待页面空闲后再提交内容
+   */
+  private async waitForPageIdle(timeout = 60000, interval = 1000): Promise<boolean> {
+    const startTime = Date.now();
+    let lastLogTime = 0;
+
+    while (Date.now() - startTime < timeout) {
+      const state = this.detectPageBusyState();
+      if (!state.busy) {
+        this.notifyInputStatus('ready', '页面空闲，准备输入');
+        return true;
+      }
+
+      this.notifyInputStatus('waiting', state.detail || '等待页面空闲');
+      if (Date.now() - lastLogTime > 4000) {
+        this.sendDebugLog('info', state.detail ? `⏳ ${state.detail}` : '⏳ Gemini 仍在生成，等待空闲...');
+        lastLogTime = Date.now();
+      }
+
+      await this.sleep(interval);
+    }
+
+    this.notifyInputStatus('blocked', '页面长时间繁忙，提交取消');
+    return false;
+  }
+
+  /**
    * 获取生成结果
    */
   async getResult(): Promise<any> {
@@ -438,6 +529,7 @@ export class GeminiAdapter extends BaseAdapter {
     await this.sleep(500);
 
     console.log('[Gemini Adapter] 清理完成，准备执行下一步');
+    this.notifyInputStatus('idle', '输入已重置');
   }
 
   /**

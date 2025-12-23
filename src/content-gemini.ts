@@ -21,6 +21,15 @@ sendDebugLog('info', '✅ Content Script 已注入到 Gemini 页面');
 let currentAdapter: GeminiAdapter | null = null;
 let statusCheckInterval: number | null = null;
 
+const DOM_STATUS_SELECTORS = {
+  stopButton: 'button.send-button.stop',
+  submitButton: 'button.send-button',
+  submitButtonContainer: '.send-button-container',
+  loadingIndicator: '.spinner, [aria-label*="正在生成"], [aria-busy="true"]',
+  latestResponse: 'message-content:last-child, .model-response:last-child, [data-testid="output-card"]:last-of-type',
+  inputBox: 'rich-textarea .ql-editor[contenteditable="true"]'
+};
+
 // 监听来自 background 的消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Content-Gemini] 收到消息:', message);
@@ -91,14 +100,28 @@ async function handleSubmitTask(task: Task): Promise<{ success: boolean; error?:
  */
 async function handleCheckStatus(): Promise<{ status: TaskStatus; reason?: string }> {
   if (!currentAdapter) {
-    return {
-      status: TaskStatus.PENDING,
-      reason: '页面空闲，未检测到执行中的任务'
-    };
+    return detectPageStatusFromDom();
   }
 
   const status = await currentAdapter.checkStatus();
-  return { status };
+  let reason: string | undefined;
+
+  switch (status) {
+    case TaskStatus.RUNNING:
+      reason = '任务执行中，等待 Gemini 完成回应';
+      break;
+    case TaskStatus.COMPLETED:
+      reason = '任务已完成，等待下一步';
+      break;
+    case TaskStatus.FAILED:
+      reason = '任务执行失败，请查看调试日志';
+      break;
+    case TaskStatus.PENDING:
+      reason = '任务尚未开始';
+      break;
+  }
+
+  return { status, reason };
 }
 
 /**
@@ -163,4 +186,99 @@ function startStatusMonitoring(taskId: string) {
       }
     }
   }, 2000);
+}
+
+/**
+ * 在没有适配器执行任务时，通过 DOM 快速检测页面状态
+ */
+function detectPageStatusFromDom(): { status: TaskStatus; reason: string } {
+  const stopButton = document.querySelector(DOM_STATUS_SELECTORS.stopButton);
+  if (stopButton) {
+    return {
+      status: TaskStatus.RUNNING,
+      reason: '检测到“停止回答”按钮，页面正在生成响应'
+    };
+  }
+
+  const loadingIndicator = document.querySelector(DOM_STATUS_SELECTORS.loadingIndicator);
+  if (loadingIndicator) {
+    const display = window.getComputedStyle(loadingIndicator).display;
+    if (display !== 'none') {
+      return {
+        status: TaskStatus.RUNNING,
+        reason: '检测到加载指示器，页面仍在生成'
+      };
+    }
+  }
+
+  const submitButton = document.querySelector(DOM_STATUS_SELECTORS.submitButton) as HTMLButtonElement | null;
+  const inputBox = document.querySelector(DOM_STATUS_SELECTORS.inputBox) as HTMLElement | null;
+  const inputText = inputBox?.textContent?.replace(/\u200b/g, '').trim() || '';
+  const hasInputContent = inputText.length > 0;
+
+  const submitButtonContainer = document.querySelector(
+    DOM_STATUS_SELECTORS.submitButtonContainer
+  ) as HTMLElement | null;
+  const containerDisabled = submitButtonContainer?.classList.contains('disabled') ?? false;
+
+  if (submitButton || submitButtonContainer) {
+    const isDisabled = submitButton?.disabled ||
+      submitButton?.getAttribute('aria-disabled') === 'true' ||
+      containerDisabled;
+    const ariaLabel = submitButton?.getAttribute('aria-label') || '';
+    const classList = submitButton?.classList;
+
+    const isStopMode =
+      (!!classList && (classList.contains('stop') || classList.contains('is-generating'))) ||
+      ariaLabel.includes('停止') ||
+      ariaLabel.includes('Stop');
+
+    if (isStopMode) {
+      return {
+        status: TaskStatus.RUNNING,
+        reason: '检测到“停止回答”按钮，页面正在生成响应'
+      };
+    }
+
+    if (!isDisabled) {
+      return {
+        status: TaskStatus.COMPLETED,
+        reason: '发送按钮可用，页面空闲等待输入'
+      };
+    }
+
+    // 按钮被禁用但没有输入内容 => 正在等待用户输入
+    if (!hasInputContent) {
+      return {
+        status: TaskStatus.PENDING,
+        reason: '等待输入提示内容'
+      };
+    }
+  }
+
+  const latestResponse = document.querySelector(DOM_STATUS_SELECTORS.latestResponse) as HTMLElement | null;
+  if (latestResponse) {
+    const ariaBusy = latestResponse.getAttribute('aria-busy');
+    if (ariaBusy === 'true') {
+      return {
+        status: TaskStatus.RUNNING,
+        reason: '最新响应仍在更新'
+      };
+    }
+
+    const textLength = latestResponse.textContent?.trim().length || 0;
+    if (textLength > 0) {
+      return {
+        status: TaskStatus.COMPLETED,
+        reason: '检测到最近一次响应已完成'
+      };
+    }
+  }
+
+  return {
+    status: TaskStatus.COMPLETED,
+    reason: hasInputContent
+      ? '检测到输入内容但未在生成，页面等待发送'
+      : '未检测到生成迹象，页面处于等待状态'
+  };
 }

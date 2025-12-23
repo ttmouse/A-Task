@@ -35,8 +35,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'STOP_TASK':
-      handleStopTask(message.taskId);
-      break;
+      handleStopTask(message.taskId).then(sendResponse);
+      return true; // 异步响应
 
     case 'TASK_STATUS_UPDATE':
       handleTaskStatusUpdate(message.taskId, message.status);
@@ -267,39 +267,49 @@ async function handleStartTask(taskId: string) {
 /**
  * 处理停止任务（暂停）
  */
-async function handleStopTask(taskId: string) {
+async function handleStopTask(taskId: string): Promise<{ success: boolean; error?: string }> {
   console.log('[Background] 暂停任务:', taskId);
   console.log('[Background] 当前任务:', currentTask);
 
-  // AIDEV-NOTE: 修复暂停逻辑 - 即使 currentTask 不匹配也要更新任务状态
-  // 原因：任务可能已经在后台完成或被其他流程清空了 currentTask
-  if (currentTask?.id === taskId) {
-    console.log('[Background] currentTask 匹配，通知 content script 停止');
+  try {
+    // AIDEV-NOTE: 修复暂停逻辑 - 即使 currentTask 不匹配也要更新任务状态
+    // 原因：任务可能已经在后台完成或被其他流程清空了 currentTask
+    if (currentTask?.id === taskId) {
+      console.log('[Background] currentTask 匹配，通知 content script 停止');
 
-    // 通知 content script 停止
-    try {
-      await sendMessageToContentScript(currentTask.siteType, {
-        type: 'STOP_TASK'
-      });
-    } catch (error) {
-      console.warn('[Background] 通知 content script 停止失败:', error);
+      // 通知 content script 停止
+      try {
+        await sendMessageToContentScript(currentTask.siteType, {
+          type: 'STOP_TASK'
+        });
+      } catch (error) {
+        console.warn('[Background] 通知 content script 停止失败:', error);
+      }
+
+      currentTask = null;
+    } else {
+      console.warn('[Background] currentTask 不匹配或为空，但仍然更新任务状态');
     }
 
-    currentTask = null;
-  } else {
-    console.warn('[Background] currentTask 不匹配或为空，但仍然更新任务状态');
+    // AIDEV-NOTE: 无论 currentTask 是否匹配，都要更新任务状态
+    // 这样可以避免 UI 显示不一致的问题
+    await TaskStorage.updateTask(taskId, {
+      status: TaskStatus.PENDING
+    });
+
+    console.log('[Background] 任务已暂停，状态已更新为 PENDING');
+
+    // AIDEV-NOTE: 暂停后不自动执行下一个任务
+    // 用户需要手动点击"开始"按钮来继续执行任务
+
+    return { success: true };
+  } catch (error) {
+    console.error('[Background] 暂停任务失败:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '暂停失败'
+    };
   }
-
-  // AIDEV-NOTE: 无论 currentTask 是否匹配，都要更新任务状态
-  // 这样可以避免 UI 显示不一致的问题
-  await TaskStorage.updateTask(taskId, {
-    status: TaskStatus.PENDING
-  });
-
-  console.log('[Background] 任务已暂停，状态已更新为 PENDING');
-
-  // AIDEV-NOTE: 暂停后不自动执行下一个任务
-  // 用户需要手动点击"开始"按钮来继续执行任务
 }
 
 /**

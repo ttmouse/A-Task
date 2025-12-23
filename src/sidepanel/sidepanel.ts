@@ -14,19 +14,21 @@ const taskList = document.getElementById('taskList') as HTMLDivElement;
 const emptyState = document.getElementById('emptyState') as HTMLDivElement;
 
 // 连接状态元素
-const statusDot = document.getElementById('statusDot') as HTMLSpanElement;
-const statusText = document.getElementById('statusText') as HTMLSpanElement;
+const statusConnectionDot = document.getElementById('statusConnectionDot') as HTMLSpanElement;
+const statusConnectionText = document.getElementById('statusConnectionText') as HTMLSpanElement;
+const statusConnectionItem = document.getElementById('connectionStatusItem') as HTMLDivElement;
+const statusPageDot = document.getElementById('statusPageDot') as HTMLSpanElement;
+const statusPageText = document.getElementById('statusPageText') as HTMLSpanElement;
+const statusPageItem = document.getElementById('pageStatusItem') as HTMLDivElement;
+const statusInputDot = document.getElementById('statusInputDot') as HTMLSpanElement;
+const statusInputText = document.getElementById('statusInputText') as HTMLSpanElement;
+const statusInputItem = document.getElementById('inputStatusItem') as HTMLDivElement;
 const manualInjectBtn = document.getElementById('manualInjectBtn') as HTMLButtonElement;
-const pageStatusDot = document.getElementById('pageStatusDot') as HTMLSpanElement;
-const pageStatusText = document.getElementById('pageStatusText') as HTMLSpanElement;
-const pageStatusDetail = document.getElementById('pageStatusDetail') as HTMLSpanElement;
 const checkPageStatusBtn = document.getElementById('checkPageStatusBtn') as HTMLButtonElement;
-const manualPageStatusBtnDefaultText = checkPageStatusBtn.textContent?.trim() || '🔍 手动检测';
+const manualPageStatusBtnDefaultText = checkPageStatusBtn.textContent?.trim() || '🔍';
 
-// 调试面板元素
-const debugPanel = document.getElementById('debugPanel') as HTMLDivElement;
+// 日志元素
 const debugContent = document.getElementById('debugContent') as HTMLDivElement;
-const toggleDebugBtn = document.getElementById('toggleDebugBtn') as HTMLButtonElement;
 
 // 表单元素
 const siteSelect = document.getElementById('siteSelect') as HTMLSelectElement;
@@ -39,6 +41,31 @@ type PageIndicatorState = TaskStatus | 'idle' | 'checking' | 'unknown';
 let currentPageStatus: PageIndicatorState = 'idle';
 let manualPageStatusAvailable = false;
 let manualPageStatusChecking = false;
+type InputIndicatorState = 'unknown' | 'idle' | 'ready' | 'waiting' | 'busy' | 'error' | 'blocked';
+let currentInputStatus: InputIndicatorState = 'unknown';
+
+type IndicatorVisualState = 'ok' | 'busy' | 'warn' | 'error' | 'idle';
+const INDICATOR_CLASSES = ['state-ok', 'state-busy', 'state-warn', 'state-error', 'state-idle'];
+
+function applyIndicatorState(dot: HTMLElement, state: IndicatorVisualState) {
+  dot.classList.remove(...INDICATOR_CLASSES);
+  dot.classList.add(`state-${state}`);
+}
+
+function setStatusText(
+  textElement: HTMLElement,
+  value: string,
+  detail?: string,
+  container?: HTMLElement
+) {
+  textElement.textContent = value;
+  const target = container || textElement;
+  if (detail) {
+    target.setAttribute('title', detail);
+  } else {
+    target.removeAttribute('title');
+  }
+}
 
 // 事件监听
 panelTitle.addEventListener('click', openExtensionPage);
@@ -47,12 +74,13 @@ addTaskBtn.addEventListener('click', openModal);
 closeModalBtn.addEventListener('click', closeModal);
 cancelBtn.addEventListener('click', closeModal);
 submitTaskBtn.addEventListener('click', handleSubmitTask);
-toggleDebugBtn.addEventListener('click', toggleDebugPanel);
 manualInjectBtn.addEventListener('click', handleManualInject);
 checkPageStatusBtn.addEventListener('click', handleManualPageStatusCheck);
 
 // 初始化
 setManualPageStatusCheckEnabled(false);
+manualInjectBtn.disabled = true;
+updateInputStatus('unknown', '等待页面状态');
 init();
 
 async function init() {
@@ -91,6 +119,9 @@ async function init() {
         : meta;
       updatePageStatus(message.status as TaskStatus, detailText);
     }
+    if (message.type === 'INPUT_STATUS_UPDATE') {
+      updateInputStatus(message.state as InputIndicatorState, message.detail);
+    }
   });
 }
 
@@ -118,52 +149,51 @@ async function checkConnectionStatus() {
  */
 function updatePageStatus(state: PageIndicatorState, detail?: string) {
   currentPageStatus = state;
-  const classes = ['page-checking', 'page-running', 'page-waiting', 'page-error', 'page-idle'];
-  pageStatusDot.classList.remove(...classes);
-
-  let text = '等待任务';
+  let text = '等待状态';
   let detailText = detail || '尚未收到来自页面的状态';
+  let visual: IndicatorVisualState = 'idle';
 
   switch (state) {
     case 'checking':
-      pageStatusDot.classList.add('page-checking');
-      text = '检测中...';
+      text = '检测中';
       detailText = detail || '正在与页面通信';
+      visual = 'busy';
       break;
     case TaskStatus.RUNNING:
-      pageStatusDot.classList.add('page-running');
-      text = '页面生成中';
-      detailText = detail || '检测到 Gemini 正在生成内容';
+      text = '生成中';
+      detailText = detail || 'Gemini 正在生成内容';
+      visual = 'busy';
       break;
     case TaskStatus.COMPLETED:
-      pageStatusDot.classList.add('page-waiting');
-      text = '生成完成';
-      detailText = detail || '页面已生成完毕，处于等待状态';
+      text = '完成';
+      detailText = detail || '页面已生成完毕';
+      visual = 'ok';
       break;
     case TaskStatus.PENDING:
-      pageStatusDot.classList.add('page-waiting');
-      text = '等待执行';
+      text = '待执行';
       detailText = detail || '任务尚未开始';
+      visual = 'warn';
       break;
     case TaskStatus.FAILED:
-      pageStatusDot.classList.add('page-error');
-      text = '检测到错误';
+      text = '错误';
       detailText = detail || '请查看调试日志';
+      visual = 'error';
       break;
     case 'unknown':
-      pageStatusDot.classList.add('page-idle');
-      text = '状态未知';
+      text = '未知';
       detailText = detail || '等待来自页面的状态';
+      visual = 'warn';
       break;
+    case 'idle':
     default:
-      pageStatusDot.classList.add('page-idle');
-      text = '等待任务';
-      detailText = detail || '尚未收到来自页面的状态';
+      text = '空闲';
+      detailText = detail || '等待新的输入';
+      visual = 'idle';
       break;
   }
 
-  pageStatusText.textContent = text;
-  pageStatusDetail.textContent = detailText;
+  applyIndicatorState(statusPageDot, visual);
+  setStatusText(statusPageText, text, detailText, statusPageItem);
 }
 
 function formatPageStatusDetail(params: {
@@ -211,6 +241,55 @@ function isPageStatusIdleState(): boolean {
   return currentPageStatus === 'idle' || currentPageStatus === 'unknown';
 }
 
+function updateInputStatus(state: InputIndicatorState, detail?: string) {
+  currentInputStatus = state;
+  let text = '未知';
+  let info = detail || '等待检测输入框';
+  let visual: IndicatorVisualState = 'idle';
+
+  switch (state) {
+    case 'ready':
+      text = '可输入';
+      info = detail || '输入框已就绪';
+      visual = 'ok';
+      break;
+    case 'waiting':
+      text = '等待';
+      info = detail || '等待页面空闲';
+      visual = 'busy';
+      break;
+    case 'busy':
+      text = '执行中';
+      info = detail || '任务正在执行';
+      visual = 'busy';
+      break;
+    case 'blocked':
+      text = '受阻';
+      info = detail || '页面忙碌，暂不可输入';
+      visual = 'warn';
+      break;
+    case 'error':
+      text = '错误';
+      info = detail || '无法定位输入框';
+      visual = 'error';
+      break;
+    case 'idle':
+      text = '空闲';
+      info = detail || '等待新的任务';
+      visual = 'idle';
+      break;
+    case 'unknown':
+    default:
+      text = '未知';
+      info = detail || '尚未检测';
+      visual = 'idle';
+      break;
+  }
+
+  applyIndicatorState(statusInputDot, visual);
+  setStatusText(statusInputText, text, info, statusInputItem);
+}
+
 function setManualPageStatusCheckEnabled(enabled: boolean) {
   manualPageStatusAvailable = enabled;
   if (!manualPageStatusChecking) {
@@ -222,34 +301,35 @@ function setManualPageStatusCheckEnabled(enabled: boolean) {
  * 更新连接状态显示
  */
 function updateConnectionStatus(status: 'checking' | 'connected' | 'disconnected') {
-  // 清除所有状态类
-  statusDot.classList.remove('checking', 'connected', 'disconnected');
-
   switch (status) {
     case 'checking':
-      statusDot.classList.add('checking');
-      statusText.textContent = '检测中...';
-      manualInjectBtn.style.display = 'none';
+      applyIndicatorState(statusConnectionDot, 'busy');
+      setStatusText(statusConnectionText, '检测中', '正在检测 content script', statusConnectionItem);
+      manualInjectBtn.disabled = true;
       if (isPageStatusIdleState()) {
         updatePageStatus('checking', '正在检测页面连接状态...');
       }
       setManualPageStatusCheckEnabled(false);
       break;
     case 'connected':
-      statusDot.classList.add('connected');
-      statusText.textContent = '已连接到页面';
-      manualInjectBtn.style.display = 'none';
+      applyIndicatorState(statusConnectionDot, 'ok');
+      setStatusText(statusConnectionText, '已连接', 'Content Script 在线', statusConnectionItem);
+      manualInjectBtn.disabled = true;
       if (isPageStatusIdleState()) {
         updatePageStatus('idle', '已连接，等待任务或手动检测');
       }
       setManualPageStatusCheckEnabled(true);
+      if (currentInputStatus === 'unknown') {
+        updateInputStatus('idle', '等待新的任务');
+      }
       break;
     case 'disconnected':
-      statusDot.classList.add('disconnected');
-      statusText.textContent = '未连接 - 请打开 Gemini 页面';
-      manualInjectBtn.style.display = 'inline-block';
+      applyIndicatorState(statusConnectionDot, 'error');
+      setStatusText(statusConnectionText, '未连接', '请打开 Gemini 页面', statusConnectionItem);
+      manualInjectBtn.disabled = false;
       updatePageStatus('unknown', '未连接，无法检测页面状态');
       setManualPageStatusCheckEnabled(false);
+      updateInputStatus('unknown', '未连接，无法检测输入状态');
       break;
   }
 }
@@ -285,7 +365,7 @@ async function handleManualPageStatusCheck() {
 
   manualPageStatusChecking = true;
   checkPageStatusBtn.disabled = true;
-  checkPageStatusBtn.textContent = '检测中...';
+  checkPageStatusBtn.textContent = '…';
   updatePageStatus('checking', '正在手动检测页面状态...');
 
   try {
@@ -300,7 +380,13 @@ async function handleManualPageStatusCheck() {
       const detail = response.detail
         ? [response.detail, meta].join(' · ')
         : meta;
-      updatePageStatus(response.status as TaskStatus, detail);
+      const status = response.status as TaskStatus;
+      updatePageStatus(status, detail);
+      if (status === TaskStatus.COMPLETED) {
+        updateInputStatus('idle', '手动检测：页面空闲');
+      } else if (status === TaskStatus.RUNNING) {
+        updateInputStatus('waiting', '手动检测：页面仍在生成');
+      }
     } else {
       updatePageStatus('unknown', response?.error || '无法检测页面状态');
     }
@@ -692,26 +778,13 @@ function openExtensionPage() {
 }
 
 /**
- * 切换调试面板
- */
-function toggleDebugPanel() {
-  debugPanel.classList.toggle('collapsed');
-  toggleDebugBtn.textContent = debugPanel.classList.contains('collapsed') ? '展开' : '收起';
-}
-
-/**
  * 添加调试日志
  */
 function addDebugLog(level: 'info' | 'success' | 'warning' | 'error', message: string) {
-  // 移除空状态提示
-  const emptyMsg = debugContent.querySelector('.debug-empty');
+  const emptyMsg = debugContent.querySelector('.log-empty');
   if (emptyMsg) {
     emptyMsg.remove();
   }
-
-  // 创建日志项
-  const debugItem = document.createElement('div');
-  debugItem.className = `debug-item ${level}`;
 
   const time = new Date().toLocaleTimeString('zh-CN', {
     hour12: false,
@@ -720,25 +793,17 @@ function addDebugLog(level: 'info' | 'success' | 'warning' | 'error', message: s
     second: '2-digit'
   });
 
-  debugItem.innerHTML = `
-    <span class="debug-item-time">${time}</span>
-    <span class="debug-item-message">${message}</span>
-  `;
-
-  debugContent.appendChild(debugItem);
+  const logLine = document.createElement('div');
+  logLine.className = `log-line ${level}`;
+  logLine.textContent = `${time} ${message}`;
+  debugContent.appendChild(logLine);
 
   // 自动滚动到底部
   debugContent.scrollTop = debugContent.scrollHeight;
 
   // 保持最多50条日志
-  const items = debugContent.querySelectorAll('.debug-item');
-  if (items.length > 50) {
+  const items = debugContent.querySelectorAll('.log-line');
+  if (items.length > 100) {
     items[0].remove();
-  }
-
-  // 自动展开面板
-  if (debugPanel.classList.contains('collapsed')) {
-    debugPanel.classList.remove('collapsed');
-    toggleDebugBtn.textContent = '收起';
   }
 }
