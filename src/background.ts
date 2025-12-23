@@ -207,7 +207,12 @@ async function handleManualInject(): Promise<{ success: boolean; error?: string 
 /**
  * 手动检测页面状态
  */
-async function handleRequestPageStatus(): Promise<{ success: boolean; status?: TaskStatus; error?: string }> {
+async function handleRequestPageStatus(): Promise<{
+  success: boolean;
+  status?: TaskStatus;
+  detail?: string;
+  error?: string;
+}> {
   try {
     // 优先使用当前任务的站点，否则默认 Gemini
     const targetSite = currentTask?.siteType || SiteType.GEMINI;
@@ -217,10 +222,16 @@ async function handleRequestPageStatus(): Promise<{ success: boolean; status?: T
     });
 
     if (response?.status) {
-      broadcastPageStatus(response.status, currentTask?.id || null, 'manual');
+      broadcastPageStatus(
+        response.status,
+        currentTask?.id || null,
+        'manual',
+        response.reason
+      );
       return {
         success: true,
-        status: response.status
+        status: response.status,
+        detail: response.reason
       };
     }
 
@@ -258,26 +269,37 @@ async function handleStartTask(taskId: string) {
  */
 async function handleStopTask(taskId: string) {
   console.log('[Background] 暂停任务:', taskId);
+  console.log('[Background] 当前任务:', currentTask);
 
+  // AIDEV-NOTE: 修复暂停逻辑 - 即使 currentTask 不匹配也要更新任务状态
+  // 原因：任务可能已经在后台完成或被其他流程清空了 currentTask
   if (currentTask?.id === taskId) {
-    // 通知 content script 停止
-    await sendMessageToContentScript(currentTask.siteType, {
-      type: 'STOP_TASK'
-    });
+    console.log('[Background] currentTask 匹配，通知 content script 停止');
 
-    // AIDEV-NOTE: 暂停任务 - 保持当前进度
-    // 任务状态改回 PENDING，保持 currentStepIndex 不变
-    // 这样用户可以通过"开始"按钮继续执行
-    await TaskStorage.updateTask(taskId, {
-      status: TaskStatus.PENDING
-    });
+    // 通知 content script 停止
+    try {
+      await sendMessageToContentScript(currentTask.siteType, {
+        type: 'STOP_TASK'
+      });
+    } catch (error) {
+      console.warn('[Background] 通知 content script 停止失败:', error);
+    }
 
     currentTask = null;
-
-    // AIDEV-NOTE: 暂停后不自动执行下一个任务
-    // 用户需要手动点击"开始"按钮来继续执行任务
-    console.log('[Background] 任务已暂停，不会自动执行下一个任务');
+  } else {
+    console.warn('[Background] currentTask 不匹配或为空，但仍然更新任务状态');
   }
+
+  // AIDEV-NOTE: 无论 currentTask 是否匹配，都要更新任务状态
+  // 这样可以避免 UI 显示不一致的问题
+  await TaskStorage.updateTask(taskId, {
+    status: TaskStatus.PENDING
+  });
+
+  console.log('[Background] 任务已暂停，状态已更新为 PENDING');
+
+  // AIDEV-NOTE: 暂停后不自动执行下一个任务
+  // 用户需要手动点击"开始"按钮来继续执行任务
 }
 
 /**
@@ -568,13 +590,15 @@ async function sendMessageToContentScript(siteType: SiteType, message: any, retr
 function broadcastPageStatus(
   status: TaskStatus,
   taskId: string | null,
-  source: 'task' | 'manual'
+  source: 'task' | 'manual',
+  detail?: string
 ): void {
   chrome.runtime.sendMessage({
     type: 'PAGE_STATUS_UPDATE',
     status,
     taskId,
     source,
+    detail,
     timestamp: Date.now()
   }, () => {
     // 忽略没有接收方时的错误

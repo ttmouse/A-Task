@@ -67,6 +67,7 @@ async function init() {
   // 监听存储变化
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
+      console.log('[Sidepanel] Storage 变化检测到，重新加载任务列表', changes);
       loadTasks();
     }
   });
@@ -80,12 +81,15 @@ async function init() {
       updateConnectionStatus(message.status);
     }
     if (message.type === 'PAGE_STATUS_UPDATE') {
-      const detail = formatPageStatusDetail({
+      const meta = formatPageStatusDetail({
         source: message.source,
         taskId: message.taskId,
         timestamp: message.timestamp
       });
-      updatePageStatus(message.status as TaskStatus, detail);
+      const detailText = message.detail
+        ? [message.detail, meta].filter(Boolean).join(' · ')
+        : meta;
+      updatePageStatus(message.status as TaskStatus, detailText);
     }
   });
 }
@@ -288,11 +292,15 @@ async function handleManualPageStatusCheck() {
     const response = await chrome.runtime.sendMessage({ type: 'REQUEST_PAGE_STATUS' });
 
     if (response?.success && response.status) {
-      updatePageStatus(response.status as TaskStatus, formatPageStatusDetail({
+      const meta = formatPageStatusDetail({
         source: 'manual',
         timestamp: Date.now(),
         note: '手动检测'
-      }));
+      });
+      const detail = response.detail
+        ? [response.detail, meta].join(' · ')
+        : meta;
+      updatePageStatus(response.status as TaskStatus, detail);
     } else {
       updatePageStatus('unknown', response?.error || '无法检测页面状态');
     }
@@ -606,12 +614,25 @@ async function stopTask(taskId: string) {
   console.log('[Sidepanel] stopTask 被调用:', taskId);
   addDebugLog('info', '⏸ 正在暂停任务...');
 
-  chrome.runtime.sendMessage({
-    type: 'STOP_TASK',
-    taskId
-  });
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'STOP_TASK',
+      taskId
+    });
 
-  addDebugLog('success', '✅ 已发送暂停指令');
+    console.log('[Sidepanel] 暂停响应:', response);
+    addDebugLog('success', '✅ 已发送暂停指令');
+
+    // 手动触发刷新任务列表
+    setTimeout(() => {
+      console.log('[Sidepanel] 主动刷新任务列表');
+      loadTasks();
+    }, 500);
+
+  } catch (error) {
+    console.error('[Sidepanel] 暂停任务失败:', error);
+    addDebugLog('error', `❌ 暂停失败: ${error instanceof Error ? error.message : '未知错误'}`);
+  }
 }
 
 /**

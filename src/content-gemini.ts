@@ -89,9 +89,12 @@ async function handleSubmitTask(task: Task): Promise<{ success: boolean; error?:
 /**
  * 处理检查状态
  */
-async function handleCheckStatus(): Promise<{ status: TaskStatus }> {
+async function handleCheckStatus(): Promise<{ status: TaskStatus; reason?: string }> {
   if (!currentAdapter) {
-    return { status: TaskStatus.FAILED };
+    return {
+      status: TaskStatus.PENDING,
+      reason: '页面空闲，未检测到执行中的任务'
+    };
   }
 
   const status = await currentAdapter.checkStatus();
