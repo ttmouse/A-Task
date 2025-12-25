@@ -78,11 +78,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  */
 async function handleNewTaskAdded() {
   console.log('[Background] 新任务已添加');
-
-  // 如果当前没有执行任务，尝试执行下一个
-  if (!currentTask) {
-    await executeNextTask();
-  }
 }
 
 /**
@@ -384,15 +379,13 @@ async function handleTaskStatusUpdate(taskId: string, status: TaskStatus) {
 
     console.log('[Background] 任务完成:', taskId);
     currentTask = null;
-    await executeNextTask();
 
   } else if (status === TaskStatus.FAILED) {
-    // 更新任务状态
-    await TaskStorage.updateTask(taskId, {
-      status
-    });
-
+    await TaskStorage.updateTask(taskId, { status });
     console.log('[Background] 任务失败:', taskId);
+    if (currentTask?.id === taskId) {
+      currentTask = null;
+    }
     await handleTaskFailure(taskId);
 
   } else {
@@ -401,25 +394,6 @@ async function handleTaskStatusUpdate(taskId: string, status: TaskStatus) {
       status
     });
   }
-}
-
-/**
- * 执行下一个待执行任务
- */
-async function executeNextTask() {
-  if (currentTask) {
-    console.log('[Background] 当前有任务在执行，跳过');
-    return;
-  }
-
-  const nextTask = await TaskStorage.getNextPendingTask();
-
-  if (!nextTask) {
-    console.log('[Background] 没有待执行任务');
-    return;
-  }
-
-  await executeTask(nextTask);
 }
 
 /**
@@ -487,25 +461,14 @@ async function handleTaskFailure(taskId: string) {
     return;
   }
 
-  // 检查是否需要重试
   if (task.retryCount < task.maxRetries) {
-    console.log(`[Background] 任务将重试 (${task.retryCount + 1}/${task.maxRetries}):`, taskId);
-
-    // 更新重试次数并重置为待执行
+    console.log(`[Background] 任务失败，等待手动重试 (${task.retryCount + 1}/${task.maxRetries}):`, taskId);
     await TaskStorage.updateTask(taskId, {
-      status: TaskStatus.PENDING,
-      retryCount: task.retryCount + 1
+      retryCount: task.retryCount + 1,
+      status: TaskStatus.FAILED
     });
-
-    // 延迟后重试
-    setTimeout(() => {
-      executeNextTask();
-    }, 5000); // 5秒后重试
-
   } else {
-    console.log('[Background] 任务已达最大重试次数:', taskId);
-    currentTask = null;
-    await executeNextTask();
+    console.log('[Background] 任务已达最大重试次数，需要手动处理:', taskId);
   }
 }
 

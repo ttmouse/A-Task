@@ -1,3 +1,44 @@
+:root {
+  /* 1. Color Scheme */
+  --primary: #9D5CFF; /* Figma Purple */
+  --primary-hover: #8A4EE6;
+  --bg-main: #F5F5F5; /* Neutral Gray Background */
+  --bg-panel: #FFFFFF; /* White Panels */
+  --bg-sidebar: #2C2C2C; /* Dark Sidebar (Figma style dark tool bar or light? Figma uses dark sidebar often for tools) */
+  /* Actually Figma's UI is mostly light gray/white now, but the left tool bar is often dark or just separated. 
+     Let's go with a Dark Sidebar for contrast as requested "Left side tool panel layout" often implies a distinct strip.
+     Wait, user said "Neutral Gray/White Background". Let's stick to Light Theme for Sidebar to match "Neutral Gray/White" description.
+     Figma's sidebar is usually #2C2C2C in dark mode, or #F0F0F0 in light mode. 
+     Let's use a very dark grey for the sidebar icons background to simulate the "Tool Panel" feel or just a light grey strip.
+     Let's stick to the prompt: "Neutral Gray/White Background (#FFFFFF, #F5F5F5)". 
+     So sidebar will be #222222 (Dark Gray) for icons or background?
+     "Use Dark Gray (#222222) as main text color".
+     Let's make the sidebar #F5F5F5 (Light Gray) with Dark Gray icons.
+  */
+  --bg-sidebar-light: #F5F5F5; 
+  --text-main: #222222;
+  --text-secondary: #5E5E5E;
+  --text-tertiary: #999999;
+  
+  --accent-teal: #00F4C8;
+  --accent-pink: #FF6480;
+  
+  --border-subtle: #E5E5E5;
+  --border-focus: #9D5CFF;
+  
+  /* 5. Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* 3. Component Style */
+  --radius: 4px; /* Rounded Rectangle */
+  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-panel: 0 0 0 1px rgba(0,0,0,0.03), 0 1px 3px rgba(0,0,0,0.05); /* 0.5px blur simulation */
+  
+  /* 4. Animation */
+  --transition-fast: 0.1s ease;
+  --transition-smooth: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,288 +46,306 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  background-color: #f5f5f5;
-  color: #333;
+  font-family: var(--font-sans);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-size: 12px; /* Figma UI is usually small/compact */
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-.container {
+/* App Layout */
+.app-container {
+  display: flex;
+  height: 100%;
   width: 100%;
-  height: 100vh;
+}
+
+/* Left Sidebar (Tool Panel) */
+.sidebar {
+  width: 48px;
+  background-color: var(--bg-panel); /* Or #2C2C2C for dark toolbar? Let's stick to light for now as per "Neutral Gray/White" */
+  border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
-/* 头部样式 */
-.header {
-  background: #fff;
-  padding: 16px;
-  border-bottom: 1px solid #e0e0e0;
+.sidebar-top, .sidebar-bottom {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 8px;
   align-items: center;
 }
 
-.header h1 {
-  font-size: 18px;
-  font-weight: 600;
+.tool-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  background: transparent;
+  border: none;
+}
+
+.tool-icon:hover {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+
+.tool-icon.active {
+  background-color: #E5D4FF; /* Very light purple */
+  color: var(--primary);
+}
+
+/* Workspace */
+.workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-main); /* Canvas color */
+  overflow: hidden;
+}
+
+/* Top Nav */
+.top-nav {
+  height: 40px;
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
 }
 
 .panel-title {
-  cursor: pointer;
-  transition: color 0.2s ease;
-  user-select: none;
+  font-weight: 500; /* Medium */
+  font-size: 13px;
+  color: var(--text-main);
 }
 
-.panel-title:hover {
-  color: #1a73e8;
-}
-
-/* 头部操作按钮组 */
-.header-actions {
+.nav-right {
   display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-/* 按钮样式 */
-.btn-primary {
-  background: #1a73e8;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.btn-primary:hover {
-  background: #1557b0;
-}
-
-.btn-secondary {
-  background: #f1f3f4;
-  color: #333;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.btn-secondary:hover {
-  background: #e8eaed;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* 连接状态指示器 */
-.status-bar {
-  background: #fff;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 10px 16px;
-  display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
 }
 
-.status-items {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.status-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #555;
-}
-
-.status-label {
-  font-size: 12px;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #bdbdbd;
-}
-
-.status-dot.state-ok { background: #34a853; }
-.status-dot.state-busy { background: #fbbc04; }
-.status-dot.state-warn { background: #ff9800; }
-.status-dot.state-error { background: #e53935; }
-.status-dot.state-idle { background: #9e9e9e; }
-
-.status-value {
-  font-weight: 500;
-  color: #333;
-}
-
-.status-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.status-action {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #d0d0d0;
-  border-radius: 6px;
-  background: #f8f9fa;
+.icon-btn {
+  background: none;
+  border: none;
   cursor: pointer;
-  font-size: 16px;
+  color: var(--text-secondary);
+  padding: 4px;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.status-action:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.icon-btn:hover {
+  background-color: var(--bg-main);
+  color: var(--text-main);
 }
 
-.status-action:hover:not(:disabled) {
-  background: #e8eaed;
+/* Status Indicator */
+.status-indicator-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 100px; /* Capsule */
+  background-color: var(--bg-main);
+  cursor: default;
 }
 
-/* 任务列表 */
-.task-list {
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--text-tertiary);
+}
+
+.status-dot.state-ok { background-color: var(--accent-teal); }
+.status-dot.state-busy { background-color: var(--primary); } /* Use Primary for busy? Or Orange? User said "Teal and Pink" accents. */
+.status-dot.state-warn { background-color: #FFB020; }
+.status-dot.state-error { background-color: var(--accent-pink); }
+
+.status-text {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* Main Content Area */
+.content-area {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
 }
 
+/* Empty State */
 .empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #666;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  gap: 12px;
 }
 
-.empty-hint {
-  font-size: 14px;
-  margin-top: 8px;
-  color: #999;
+.empty-icon {
+  color: var(--border-subtle);
 }
 
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  color: var(--primary);
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  transition: var(--transition-fast);
+}
+
+.btn-ghost:hover {
+  border-color: var(--primary);
+  background-color: #F9F5FF;
+}
+
+/* Task List Items */
 .task-item {
-  background: white;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: var(--bg-panel);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-panel);
+  border: 1px solid transparent; /* Prepare for selection */
+  transition: var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-item:hover {
+  border-color: var(--border-subtle);
+  transform: translateY(-1px);
 }
 
 .task-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
 }
 
 .task-status {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
 }
 
-.task-status.pending { background: #e3f2fd; color: #1976d2; }
-.task-status.running { background: #fff3e0; color: #f57c00; }
-.task-status.completed { background: #e8f5e9; color: #388e3c; }
-.task-status.failed { background: #ffebee; color: #d32f2f; }
-
-.task-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.task-actions button {
-  background: none;
-  border: none;
-  color: #666;
-  cursor: pointer;
-  font-size: 18px;
-  padding: 4px;
-}
-
-.task-actions button:hover {
-  color: #1a73e8;
-}
+.task-status.pending { background-color: var(--bg-main); color: var(--text-secondary); }
+.task-status.running { background-color: #E5D4FF; color: var(--primary); }
+.task-status.completed { background-color: #E0FDF7; color: var(--accent-teal); }
+.task-status.failed { background-color: #FFE5EB; color: var(--accent-pink); }
 
 .task-content {
-  font-size: 14px;
-  color: #555;
+  font-size: 12px;
+  color: var(--text-main);
   line-height: 1.5;
-  margin-bottom: 8px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  font-weight: 400; /* Regular */
 }
 
 .task-meta {
-  font-size: 12px;
-  color: #999;
+  font-size: 10px;
+  color: var(--text-tertiary);
   display: flex;
-  gap: 12px;
+  gap: 8px;
+  align-items: center;
 }
 
-/* 日志区域 */
-.log-panel {
-  background: #111;
-  color: #e0e0e0;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 12px;
-  border-top: 1px solid #222;
-  max-height: 200px;
+.task-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.task-actions button {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.task-actions button:hover {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+
+/* Inspector Panel (Bottom Logs) */
+.inspector-panel {
+  height: 120px; /* Fixed height for bottom panel */
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
-.log-header {
-  padding: 8px 12px;
-  border-bottom: 1px solid #222;
+.inspector-header {
+  height: 32px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
   font-weight: 600;
-  font-size: 12px;
-  color: #f5f5f5;
+  color: var(--text-secondary);
+  background-color: #FAFAFA;
 }
 
 .log-content {
   flex: 1;
   overflow-y: auto;
   padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  font-family: 'JetBrains Mono', monospace; /* Keep mono for logs */
+  font-size: 10px;
 }
 
 .log-line {
-  white-space: pre-wrap;
-  word-break: break-word;
+  margin-bottom: 4px;
+  word-break: break-all;
+  color: var(--text-secondary);
 }
 
-.log-line.info { color: #8ab4f8; }
-.log-line.success { color: #81c995; }
-.log-line.warning { color: #fbbc04; }
-.log-line.error { color: #f28b82; }
-.log-line.empty { color: #666; font-style: italic; }
+.log-line.error { color: var(--accent-pink); }
+.log-line.success { color: var(--accent-teal); }
+.log-line.info { color: var(--text-secondary); }
+.log-line.warning { color: #FFB020; }
 
-/* 浮层样式 */
+/* Modal Styles */
 .modal {
   display: none;
   position: fixed;
@@ -294,10 +353,11 @@ button:disabled {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(2px);
 }
 
 .modal.active {
@@ -305,44 +365,44 @@ button:disabled {
 }
 
 .modal-content {
-  background: white;
-  border-radius: 8px;
+  background: var(--bg-panel);
   width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
+  max-width: 400px;
+  border-radius: 8px; /* Slightly larger radius for modal */
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .modal-header h2 {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
+  color: var(--text-main);
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 28px;
-  color: #666;
+  font-size: 20px;
+  color: var(--text-tertiary);
   cursor: pointer;
-  line-height: 1;
 }
 
 .close-btn:hover {
-  color: #333;
+  color: var(--text-main);
 }
 
 .modal-body {
-  padding: 20px;
-  overflow-y: auto;
+  padding: 16px;
 }
 
 .form-group {
@@ -351,35 +411,88 @@ button:disabled {
 
 .form-group label {
   display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
 }
 
 .form-control {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  font-family: inherit;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-main);
+  background: var(--bg-main);
+  transition: var(--transition-fast);
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #1a73e8;
-}
-
-textarea.form-control {
-  resize: vertical;
-  min-height: 100px;
+  border-color: var(--primary);
+  background: var(--bg-panel);
+  box-shadow: 0 0 0 2px rgba(157, 92, 255, 0.1);
 }
 
 .modal-footer {
-  padding: 16px 20px;
-  border-top: 1px solid #e0e0e0;
+  padding: 16px;
+  border-top: 1px solid var(--border-subtle);
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  background-color: #FAFAFA;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  transform: scale(1.02);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-main);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #DDD;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #CCC;
 }

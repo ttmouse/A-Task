@@ -20,9 +20,6 @@ const statusConnectionItem = document.getElementById('connectionStatusItem') as 
 const statusPageDot = document.getElementById('statusPageDot') as HTMLSpanElement;
 const statusPageText = document.getElementById('statusPageText') as HTMLSpanElement;
 const statusPageItem = document.getElementById('pageStatusItem') as HTMLDivElement;
-const statusInputDot = document.getElementById('statusInputDot') as HTMLSpanElement;
-const statusInputText = document.getElementById('statusInputText') as HTMLSpanElement;
-const statusInputItem = document.getElementById('inputStatusItem') as HTMLDivElement;
 const manualInjectBtn = document.getElementById('manualInjectBtn') as HTMLButtonElement;
 const checkPageStatusBtn = document.getElementById('checkPageStatusBtn') as HTMLButtonElement;
 const manualPageStatusBtnDefaultText = checkPageStatusBtn.textContent?.trim() || '🔍';
@@ -43,6 +40,8 @@ let manualPageStatusAvailable = false;
 let manualPageStatusChecking = false;
 type InputIndicatorState = 'unknown' | 'idle' | 'ready' | 'waiting' | 'busy' | 'error' | 'blocked';
 let currentInputStatus: InputIndicatorState = 'unknown';
+let lastPageStatusDetail: string | undefined;
+let lastInputStatusDetail: string | undefined;
 
 type IndicatorVisualState = 'ok' | 'busy' | 'warn' | 'error' | 'idle';
 const INDICATOR_CLASSES = ['state-ok', 'state-busy', 'state-warn', 'state-error', 'state-idle'];
@@ -149,51 +148,8 @@ async function checkConnectionStatus() {
  */
 function updatePageStatus(state: PageIndicatorState, detail?: string) {
   currentPageStatus = state;
-  let text = '等待状态';
-  let detailText = detail || '尚未收到来自页面的状态';
-  let visual: IndicatorVisualState = 'idle';
-
-  switch (state) {
-    case 'checking':
-      text = '检测中';
-      detailText = detail || '正在与页面通信';
-      visual = 'busy';
-      break;
-    case TaskStatus.RUNNING:
-      text = '生成中';
-      detailText = detail || 'Gemini 正在生成内容';
-      visual = 'busy';
-      break;
-    case TaskStatus.COMPLETED:
-      text = '完成';
-      detailText = detail || '页面已生成完毕';
-      visual = 'ok';
-      break;
-    case TaskStatus.PENDING:
-      text = '待执行';
-      detailText = detail || '任务尚未开始';
-      visual = 'warn';
-      break;
-    case TaskStatus.FAILED:
-      text = '错误';
-      detailText = detail || '请查看调试日志';
-      visual = 'error';
-      break;
-    case 'unknown':
-      text = '未知';
-      detailText = detail || '等待来自页面的状态';
-      visual = 'warn';
-      break;
-    case 'idle':
-    default:
-      text = '空闲';
-      detailText = detail || '等待新的输入';
-      visual = 'idle';
-      break;
-  }
-
-  applyIndicatorState(statusPageDot, visual);
-  setStatusText(statusPageText, text, detailText, statusPageItem);
+  lastPageStatusDetail = detail;
+  refreshExecutionIndicator();
 }
 
 function formatPageStatusDetail(params: {
@@ -243,51 +199,121 @@ function isPageStatusIdleState(): boolean {
 
 function updateInputStatus(state: InputIndicatorState, detail?: string) {
   currentInputStatus = state;
-  let text = '未知';
-  let info = detail || '等待检测输入框';
-  let visual: IndicatorVisualState = 'idle';
+  lastInputStatusDetail = detail;
+  refreshExecutionIndicator();
+}
 
-  switch (state) {
-    case 'ready':
-      text = '可输入';
-      info = detail || '输入框已就绪';
-      visual = 'ok';
-      break;
-    case 'waiting':
-      text = '等待';
-      info = detail || '等待页面空闲';
-      visual = 'busy';
-      break;
-    case 'busy':
-      text = '执行中';
-      info = detail || '任务正在执行';
-      visual = 'busy';
-      break;
-    case 'blocked':
-      text = '受阻';
-      info = detail || '页面忙碌，暂不可输入';
-      visual = 'warn';
-      break;
-    case 'error':
-      text = '错误';
-      info = detail || '无法定位输入框';
-      visual = 'error';
-      break;
-    case 'idle':
-      text = '空闲';
-      info = detail || '等待新的任务';
-      visual = 'idle';
-      break;
-    case 'unknown':
-    default:
-      text = '未知';
-      info = detail || '尚未检测';
-      visual = 'idle';
-      break;
+// 将页面（任务）状态与输入框状态融合到单一指示器
+function refreshExecutionIndicator() {
+  const display = computeExecutionIndicator();
+  applyIndicatorState(statusPageDot, display.visual);
+  setStatusText(statusPageText, display.text, display.detail, statusPageItem);
+}
+
+function computeExecutionIndicator(): { text: string; detail: string; visual: IndicatorVisualState } {
+  const pageDetail = lastPageStatusDetail;
+  const inputDetail = lastInputStatusDetail;
+
+  if (currentPageStatus === 'checking') {
+    return {
+      text: '检测中',
+      detail: pageDetail || '正在与页面通信',
+      visual: 'busy'
+    };
   }
 
-  applyIndicatorState(statusInputDot, visual);
-  setStatusText(statusInputText, text, info, statusInputItem);
+  if (currentPageStatus === 'unknown') {
+    return {
+      text: '未知',
+      detail: pageDetail || '等待来自页面的状态',
+      visual: 'warn'
+    };
+  }
+
+  if (currentPageStatus === TaskStatus.FAILED) {
+    return {
+      text: '错误',
+      detail: pageDetail || '请查看调试日志',
+      visual: 'error'
+    };
+  }
+
+  if (currentPageStatus === TaskStatus.RUNNING) {
+    return {
+      text: '生成中',
+      detail: pageDetail || inputDetail || 'Gemini 正在生成内容',
+      visual: 'busy'
+    };
+  }
+
+  switch (currentInputStatus) {
+    case 'error':
+      return {
+        text: '错误',
+        detail: inputDetail || '无法定位输入框',
+        visual: 'error'
+      };
+    case 'blocked':
+      return {
+        text: '受阻',
+        detail: inputDetail || '页面忙碌，暂不可输入',
+        visual: 'warn'
+      };
+    case 'waiting':
+      return {
+        text: '等待空闲',
+        detail: inputDetail || pageDetail || '页面正在生成，暂不可输入',
+        visual: 'busy'
+      };
+    case 'busy':
+      return {
+        text: '执行中',
+        detail: inputDetail || '任务正在执行',
+        visual: 'busy'
+      };
+    case 'ready':
+      return {
+        text: '可输入',
+        detail: inputDetail || '输入框已就绪',
+        visual: 'ok'
+      };
+    case 'idle':
+      return {
+        text: '空闲',
+        detail: inputDetail || '等待新的任务',
+        visual: 'idle'
+      };
+  }
+
+  if (currentPageStatus === TaskStatus.COMPLETED) {
+    return {
+      text: '完成',
+      detail: pageDetail || '页面已生成完毕',
+      visual: 'ok'
+    };
+  }
+
+  if (currentPageStatus === TaskStatus.PENDING) {
+    return {
+      text: '待执行',
+      detail: pageDetail || '任务尚未开始',
+      visual: 'warn'
+    };
+  }
+
+  if (currentPageStatus === 'idle') {
+    return {
+      text: '空闲',
+      detail: pageDetail || inputDetail || '等待新的任务',
+      visual: 'idle'
+    };
+  }
+
+  return {
+    text: '未知',
+    detail: pageDetail || inputDetail || '等待来自页面的状态',
+    visual: 'warn'
+  };
 }
 
 function setManualPageStatusCheckEnabled(enabled: boolean) {
@@ -470,7 +496,7 @@ function renderTaskItem(task: Task): string {
           ${task.status === TaskStatus.PENDING ? '<button class="start-task" title="开始执行">▶</button>' : ''}
           ${task.status === TaskStatus.RUNNING ? '<button class="stop-task" title="暂停">⏸</button>' : ''}
           ${task.status === TaskStatus.FAILED || task.status === TaskStatus.COMPLETED ? '<button class="retry-task" title="重试">🔄</button>' : ''}
-          ${task.status === TaskStatus.PENDING || task.status === TaskStatus.FAILED ? '<button class="edit-task" title="编辑">✏️</button>' : ''}
+          ${task.status === TaskStatus.PENDING || task.status === TaskStatus.FAILED || task.status === TaskStatus.COMPLETED ? '<button class="edit-task" title="编辑">✏️</button>' : ''}
           <button class="delete-task" title="删除">🗑</button>
         </div>
       </div>

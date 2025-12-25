@@ -27,7 +27,10 @@ const DOM_STATUS_SELECTORS = {
   submitButtonContainer: '.send-button-container',
   loadingIndicator: '.spinner, [aria-label*="正在生成"], [aria-busy="true"]',
   latestResponse: 'message-content:last-child, .model-response:last-child, [data-testid="output-card"]:last-of-type',
-  inputBox: 'rich-textarea .ql-editor[contenteditable="true"]'
+  inputBox: 'rich-textarea .ql-editor[contenteditable="true"]',
+  micButton: '.speech-dictation-mic-button button, .speech_dictation_mic_button',
+  sendIcon: '.send-button .mat-icon[fonticon="send"], .send-button mat-icon.send-button-icon',
+  stopIcon: '.send-button .mat-icon[fonticon="stop"], .send-button .stop-icon'
 };
 
 // 监听来自 background 的消息
@@ -193,7 +196,7 @@ function startStatusMonitoring(taskId: string) {
  */
 function detectPageStatusFromDom(): { status: TaskStatus; reason: string } {
   const stopButton = document.querySelector(DOM_STATUS_SELECTORS.stopButton);
-  if (stopButton) {
+  if (stopButton && isElementVisible(stopButton)) {
     return {
       status: TaskStatus.RUNNING,
       reason: '检测到“停止回答”按钮，页面正在生成响应'
@@ -201,7 +204,7 @@ function detectPageStatusFromDom(): { status: TaskStatus; reason: string } {
   }
 
   const loadingIndicator = document.querySelector(DOM_STATUS_SELECTORS.loadingIndicator);
-  if (loadingIndicator) {
+  if (loadingIndicator && isElementVisible(loadingIndicator)) {
     const display = window.getComputedStyle(loadingIndicator).display;
     if (display !== 'none') {
       return {
@@ -219,41 +222,77 @@ function detectPageStatusFromDom(): { status: TaskStatus; reason: string } {
   const submitButtonContainer = document.querySelector(
     DOM_STATUS_SELECTORS.submitButtonContainer
   ) as HTMLElement | null;
-  const containerDisabled = submitButtonContainer?.classList.contains('disabled') ?? false;
+  const containerDisabledClass = submitButtonContainer?.classList.contains('disabled') ?? false;
+  const containerAriaDisabled =
+    submitButtonContainer?.getAttribute('aria-disabled') === 'true' ||
+    submitButtonContainer?.getAttribute('aria-disabled') === '1';
+  const containerHasDisabledAttr = submitButtonContainer?.hasAttribute('disabled') ?? false;
+  const containerDisabled = containerDisabledClass || containerAriaDisabled || containerHasDisabledAttr;
+
+  const micButton = document.querySelector(DOM_STATUS_SELECTORS.micButton);
+  const micVisible = isElementVisible(micButton);
+
+  const sendIcon = document.querySelector(DOM_STATUS_SELECTORS.sendIcon);
+  const stopIcon = document.querySelector(DOM_STATUS_SELECTORS.stopIcon);
+
+  if (stopIcon && isElementVisible(stopIcon)) {
+    return {
+      status: TaskStatus.RUNNING,
+      reason: '检测到“停止回答”按钮，页面正在生成响应'
+    };
+  }
 
   if (submitButton || submitButtonContainer) {
-    const isDisabled = submitButton?.disabled ||
+    const buttonAriaDisabled =
       submitButton?.getAttribute('aria-disabled') === 'true' ||
+      submitButton?.getAttribute('aria-disabled') === '1';
+    const isDisabled = submitButton?.disabled ||
+      buttonAriaDisabled ||
       containerDisabled;
     const ariaLabel = submitButton?.getAttribute('aria-label') || '';
     const classList = submitButton?.classList;
-
     const isStopMode =
       (!!classList && (classList.contains('stop') || classList.contains('is-generating'))) ||
       ariaLabel.includes('停止') ||
       ariaLabel.includes('Stop');
 
-    if (isStopMode) {
-      return {
-        status: TaskStatus.RUNNING,
-        reason: '检测到“停止回答”按钮，页面正在生成响应'
-      };
-    }
+    const sendVisible = submitButton ? isElementVisible(submitButton) : isElementVisible(submitButtonContainer);
+    const sendIconVisible = sendIcon ? isElementVisible(sendIcon) : sendVisible;
 
-    if (!isDisabled) {
+    if (sendIconVisible && !isDisabled && hasInputContent) {
       return {
         status: TaskStatus.COMPLETED,
-        reason: '发送按钮可用，页面空闲等待输入'
+        reason: '待发送：输入内容已就绪'
       };
     }
 
-    // 按钮被禁用但没有输入内容 => 正在等待用户输入
-    if (!hasInputContent) {
+    if (sendIconVisible && !isDisabled) {
+      return {
+        status: TaskStatus.COMPLETED,
+        reason: '页面空闲，可输入新内容'
+      };
+    }
+
+    if (isDisabled && micVisible) {
+      return {
+        status: TaskStatus.PENDING,
+        reason: '待输入：麦克风按钮可用'
+      };
+    }
+
+    if (isDisabled && !hasInputContent) {
       return {
         status: TaskStatus.PENDING,
         reason: '等待输入提示内容'
       };
     }
+  }
+
+  if (micVisible) {
+    return {
+      status: TaskStatus.PENDING,
+      reason: '待输入：麦克风按钮可用'
+    };
   }
 
   const latestResponse = document.querySelector(DOM_STATUS_SELECTORS.latestResponse) as HTMLElement | null;
@@ -281,4 +320,18 @@ function detectPageStatusFromDom(): { status: TaskStatus; reason: string } {
       ? '检测到输入内容但未在生成，页面等待发送'
       : '未检测到生成迹象，页面处于等待状态'
   };
+}
+
+function isElementVisible(element: Element | null): boolean {
+  if (!element) return false;
+  const el = element as HTMLElement;
+  const styles = window.getComputedStyle(el);
+  if (styles.display === 'none' || styles.visibility === 'hidden' || styles.opacity === '0') {
+    return false;
+  }
+  if (el instanceof HTMLElement && el.offsetParent === null && styles.position !== 'fixed') {
+    return false;
+  }
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
 }

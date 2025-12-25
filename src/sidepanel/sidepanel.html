@@ -4,63 +4,84 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>A-Task 任务管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="sidepanel.css">
 </head>
 <body>
-  <div class="container">
-    <!-- 头部 -->
-    <header class="header">
-      <h1 id="panelTitle" class="panel-title">A-Task 任务队列</h1>
-      <div class="header-actions">
-        <button id="guideBtn" class="btn-secondary" title="查看使用指南">
-          📖 使用指南
+  <div class="app-container">
+    <!-- 1. 左侧工具面板 (Left Sidebar) -->
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="tool-icon active" title="选择">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.5 4.5L11.5 19.5L14.5 13.5L20.5 11.5L5.5 4.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </div>
+        <!-- 将 Add Task 按钮移到工具栏 -->
+        <button id="addTaskBtn" class="tool-icon" title="添加任务">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <button id="addTaskBtn" class="btn-primary">+ 添加任务</button>
+        <!-- 将 Guide 按钮移到工具栏 -->
+        <button id="guideBtn" class="tool-icon" title="使用指南">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.09 9C9.3251 8.33167 9.78915 7.76811 10.4 7.40913C11.0108 7.05016 11.7289 6.91894 12.4272 7.03871C13.1255 7.15849 13.7588 7.52152 14.2151 8.06353C14.6713 8.60553 14.9211 9.29152 14.92 10C14.92 12 11.92 13 11.92 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 17H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
       </div>
-    </header>
+      <div class="sidebar-bottom">
+         <!-- 占位：设置或其他底部工具 -->
+         <button id="manualInjectBtn" class="tool-icon" title="手动注入 Content Script">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.30005L20 11.6L11.6 20L6.30005 14.7M14.7 6.30005L15.3 5.70005C16.5 4.50005 18.2 4.30005 19.4 5.20005L18.8 9.10005L14.7 6.30005ZM6.30005 14.7L5.70005 15.3C4.50005 16.5 4.30005 18.2 5.20005 19.4L9.10005 18.8L6.30005 14.7Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+         </button>
+      </div>
+    </aside>
 
-    <!-- 状态栏 -->
-    <div class="status-bar">
-      <div class="status-items">
-        <div class="status-item" id="connectionStatusItem">
-          <span class="status-label">连接</span>
-          <span class="status-dot" id="statusConnectionDot"></span>
-          <span class="status-value" id="statusConnectionText">检测中</span>
+    <!-- 主工作区 -->
+    <main class="workspace">
+      <!-- 2. 顶部导航栏 (Top Nav) -->
+      <header class="top-nav">
+        <div class="nav-left">
+           <h1 id="panelTitle" class="panel-title">A-Task</h1>
         </div>
-        <div class="status-item" id="pageStatusItem">
-          <span class="status-label">页面</span>
-          <span class="status-dot" id="statusPageDot"></span>
-          <span class="status-value" id="statusPageText">等待状态</span>
+        <div class="nav-right">
+           <!-- 状态指示器 -->
+           <div class="status-indicator-group" id="pageStatusItem">
+              <span class="status-dot" id="statusPageDot"></span>
+              <span class="status-text" id="statusPageText">Ready</span>
+           </div>
+           <!-- 隐藏的连接状态，通过颜色或统一状态显示 -->
+           <div id="connectionStatusItem" style="display:none;">
+             <span id="statusConnectionDot"></span>
+             <span id="statusConnectionText"></span>
+           </div>
+           <button id="checkPageStatusBtn" class="icon-btn" title="刷新状态">
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 4V10H7M23 20V14H17M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14L18.36 18.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+           </button>
         </div>
-        <div class="status-item" id="inputStatusItem">
-          <span class="status-label">输入</span>
-          <span class="status-dot" id="statusInputDot"></span>
-          <span class="status-value" id="statusInputText">未知</span>
-        </div>
-      </div>
-      <div class="status-actions">
-        <button id="checkPageStatusBtn" class="status-action" title="手动检测页面状态">🔍</button>
-        <button id="manualInjectBtn" class="status-action" title="手动注入 Content Script">🔧</button>
-      </div>
-    </div>
+      </header>
 
-    <!-- 任务列表 -->
-    <div class="task-list" id="taskList">
-      <div class="empty-state" id="emptyState">
-        <p>暂无任务</p>
-        <p class="empty-hint">点击上方按钮添加第一个任务</p>
+      <!-- 3. 中间主工作区 (Main Canvas/List) -->
+      <div class="content-area" id="taskList">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <p>No tasks yet</p>
+          <button class="btn-ghost" onclick="document.getElementById('addTaskBtn').click()">Create one</button>
+        </div>
       </div>
-    </div>
 
-    <!-- 日志区域 -->
-    <div class="log-panel" id="logPanel">
-      <div class="log-header">
-        <span>📜 执行日志</span>
+      <!-- 4. 底部/右侧属性面板 (Property Inspector / Logs) -->
+      <div class="inspector-panel" id="logPanel">
+        <div class="inspector-header">
+          <span>Console</span>
+          <div class="inspector-actions">
+            <!-- 可以在这里放清空日志按钮等 -->
+          </div>
+        </div>
+        <div class="log-content" id="debugContent">
+          <div class="log-empty">System ready...</div>
+        </div>
       </div>
-      <div class="log-content" id="debugContent">
-        <div class="log-empty">等待日志...</div>
-      </div>
-    </div>
+    </main>
   </div>
 
   <!-- 添加/编辑任务浮层 -->
