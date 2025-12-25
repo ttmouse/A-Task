@@ -22,7 +22,8 @@ const statusPageText = document.getElementById('statusPageText') as HTMLSpanElem
 const statusPageItem = document.getElementById('pageStatusItem') as HTMLDivElement;
 const manualInjectBtn = document.getElementById('manualInjectBtn') as HTMLButtonElement;
 const checkPageStatusBtn = document.getElementById('checkPageStatusBtn') as HTMLButtonElement;
-const manualPageStatusBtnDefaultText = checkPageStatusBtn.textContent?.trim() || '🔍';
+// Store the original icon HTML instead of text content
+const manualPageStatusBtnDefaultHtml = checkPageStatusBtn.innerHTML;
 
 // 日志元素
 const debugContent = document.getElementById('debugContent') as HTMLDivElement;
@@ -364,20 +365,20 @@ function updateConnectionStatus(status: 'checking' | 'connected' | 'disconnected
  * 手动注入 content script
  */
 async function handleManualInject() {
-  addDebugLog('info', '🔧 尝试手动注入 Content Script...');
+  addDebugLog('info', 'Attempting manual injection of Content Script...');
 
   try {
     const response = await chrome.runtime.sendMessage({ type: 'MANUAL_INJECT' });
 
     if (response?.success) {
-      addDebugLog('success', '✅ 手动注入成功！');
+      addDebugLog('success', 'Manual injection successful!');
       // 立即重新检测连接状态
       setTimeout(checkConnectionStatus, 1000);
     } else {
-      addDebugLog('error', `❌ 手动注入失败: ${response?.error || '未知错误'}`);
+      addDebugLog('error', `Manual injection failed: ${response?.error || 'Unknown error'}`);
     }
   } catch (error) {
-    addDebugLog('error', `❌ 手动注入异常: ${error instanceof Error ? error.message : '未知错误'}`);
+    addDebugLog('error', `Manual injection exception: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -421,7 +422,7 @@ async function handleManualPageStatusCheck() {
     updatePageStatus('unknown', message);
   } finally {
     manualPageStatusChecking = false;
-    checkPageStatusBtn.textContent = manualPageStatusBtnDefaultText;
+    checkPageStatusBtn.innerHTML = manualPageStatusBtnDefaultHtml;
     checkPageStatusBtn.disabled = !manualPageStatusAvailable;
   }
 }
@@ -664,7 +665,7 @@ async function handleSubmitTask() {
       }));
       currentStepIndex = 0;
 
-      addDebugLog('info', `✅ 检测到多步骤任务，共 ${steps.length} 个步骤`);
+      addDebugLog('info', `Multi-step task detected, ${steps.length} steps total`);
     }
   }
 
@@ -682,7 +683,7 @@ async function handleSubmitTask() {
       retryCount: 0
     });
 
-    addDebugLog('success', '✅ 任务已更新');
+    addDebugLog('success', 'Task updated successfully');
   } else {
     // 新增模式：创建新任务
     const newTask: Task = {
@@ -700,7 +701,7 @@ async function handleSubmitTask() {
     };
 
     await TaskStorage.addTask(newTask);
-    addDebugLog('success', '✅ 任务已添加');
+    addDebugLog('success', 'Task added successfully');
 
     // 通知 background 有新任务
     chrome.runtime.sendMessage({ type: 'NEW_TASK_ADDED' });
@@ -724,7 +725,7 @@ async function startTask(taskId: string) {
  */
 async function stopTask(taskId: string) {
   console.log('[Sidepanel] stopTask 被调用:', taskId);
-  addDebugLog('info', '⏸ 正在暂停任务...');
+  addDebugLog('info', 'Pausing task...');
 
   try {
     const response = await chrome.runtime.sendMessage({
@@ -733,7 +734,7 @@ async function stopTask(taskId: string) {
     });
 
     console.log('[Sidepanel] 暂停响应:', response);
-    addDebugLog('success', '✅ 已发送暂停指令');
+    addDebugLog('success', 'Pause command sent');
 
     // 手动触发刷新任务列表
     setTimeout(() => {
@@ -743,7 +744,7 @@ async function stopTask(taskId: string) {
 
   } catch (error) {
     console.error('[Sidepanel] 暂停任务失败:', error);
-    addDebugLog('error', `❌ 暂停失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    addDebugLog('error', `Pause failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -764,7 +765,7 @@ async function retryTask(taskId: string) {
     taskId
   });
 
-  addDebugLog('info', '🔄 任务已重置，准备重新执行');
+  addDebugLog('info', 'Task reset, preparing to retry');
 }
 
 /**
