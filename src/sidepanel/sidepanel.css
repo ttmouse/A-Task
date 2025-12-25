@@ -2,19 +2,9 @@
   /* 1. Color Scheme */
   --primary: #9D5CFF; /* Figma Purple */
   --primary-hover: #8A4EE6;
-  --bg-main: #F5F5F5; /* Neutral Gray Background */
+  --bg-main: #E5E5E5; /* Canvas background (usually darker than panels) */
   --bg-panel: #FFFFFF; /* White Panels */
-  --bg-sidebar: #2C2C2C; /* Dark Sidebar (Figma style dark tool bar or light? Figma uses dark sidebar often for tools) */
-  /* Actually Figma's UI is mostly light gray/white now, but the left tool bar is often dark or just separated. 
-     Let's go with a Dark Sidebar for contrast as requested "Left side tool panel layout" often implies a distinct strip.
-     Wait, user said "Neutral Gray/White Background". Let's stick to Light Theme for Sidebar to match "Neutral Gray/White" description.
-     Figma's sidebar is usually #2C2C2C in dark mode, or #F0F0F0 in light mode. 
-     Let's use a very dark grey for the sidebar icons background to simulate the "Tool Panel" feel or just a light grey strip.
-     Let's stick to the prompt: "Neutral Gray/White Background (#FFFFFF, #F5F5F5)". 
-     So sidebar will be #222222 (Dark Gray) for icons or background?
-     "Use Dark Gray (#222222) as main text color".
-     Let's make the sidebar #F5F5F5 (Light Gray) with Dark Gray icons.
-  */
+  --bg-sidebar: #2C2C2C; /* Dark Sidebar */
   --bg-sidebar-light: #F5F5F5; 
   --text-main: #222222;
   --text-secondary: #5E5E5E;
@@ -49,7 +39,7 @@ body {
   font-family: var(--font-sans);
   background-color: var(--bg-main);
   color: var(--text-main);
-  font-size: 12px; /* Figma UI is usually small/compact */
+  font-size: 11px; /* Figma UI is usually small/compact */
   height: 100vh;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
@@ -62,63 +52,20 @@ body {
   width: 100%;
 }
 
-/* Left Sidebar (Tool Panel) */
-.sidebar {
-  width: 48px;
-  background-color: var(--bg-panel); /* Or #2C2C2C for dark toolbar? Let's stick to light for now as per "Neutral Gray/White" */
-  border-right: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px 0;
-  justify-content: space-between;
-  flex-shrink: 0;
-  z-index: 10;
-}
+/* Left Sidebar (Removed) */
+/* .sidebar removed */
 
-.sidebar-top, .sidebar-bottom {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-}
-
-.tool-icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: var(--transition-fast);
-  background: transparent;
-  border: none;
-}
-
-.tool-icon:hover {
-  background-color: var(--bg-main);
-  color: var(--text-main);
-}
-
-.tool-icon.active {
-  background-color: #E5D4FF; /* Very light purple */
-  color: var(--primary);
-}
-
-/* Workspace */
-.workspace {
+/* Main Layout Wrapper */
+.main-layout {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-main); /* Canvas color */
   overflow: hidden;
 }
 
 /* Top Nav */
 .top-nav {
-  height: 40px;
+  height: 48px; /* Slightly taller for toolbar */
   background-color: var(--bg-panel);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
@@ -126,12 +73,66 @@ body {
   justify-content: space-between;
   padding: 0 16px;
   flex-shrink: 0;
+  gap: 16px;
 }
 
 .panel-title {
-  font-weight: 500; /* Medium */
+  font-weight: 600;
   font-size: 13px;
   color: var(--text-main);
+  white-space: nowrap;
+}
+
+/* New Nav Toolbar (Center/Left) */
+.nav-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1; /* Take available space */
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.toolbar-btn i {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-secondary);
+}
+
+.toolbar-btn:hover {
+  background-color: var(--bg-main);
+  border-color: var(--border-subtle);
+}
+
+.toolbar-btn:hover i {
+  color: var(--text-main);
+}
+
+.toolbar-btn.primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+.toolbar-btn.primary i {
+  color: white;
+}
+
+.toolbar-btn.primary:hover {
+  background-color: var(--primary-hover);
+  border-color: transparent;
 }
 
 .nav-right {
@@ -140,22 +141,158 @@ body {
   gap: 12px;
 }
 
+.nav-divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--border-subtle);
+}
+
 .icon-btn {
   background: none;
   border: none;
   cursor: pointer;
   color: var(--text-secondary);
-  padding: 4px;
+  padding: 6px;
   border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 18px;
+  transition: var(--transition-fast);
 }
 
 .icon-btn:hover {
   background-color: var(--bg-main);
   color: var(--text-main);
 }
+
+.icon-btn-xs {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 2px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  display: flex;
+}
+.icon-btn-xs:hover {
+  color: var(--text-main);
+}
+
+/* Workspace Body (Canvas + Right Panel) */
+.workspace-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  background-color: #F0F0F0; /* Canvas Background */
+}
+
+/* Main Content Area (Canvas) */
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Empty State */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  gap: 16px;
+}
+
+.empty-icon {
+  color: var(--border-subtle);
+  font-size: 48px; /* Large Icon */
+}
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  color: var(--primary);
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  transition: var(--transition-fast);
+}
+
+.btn-ghost:hover {
+  border-color: var(--primary);
+  background-color: #F9F5FF;
+}
+
+/* Right Panel (Inspector) */
+.right-panel {
+  width: 320px; /* Fixed width like Figma */
+  background-color: var(--bg-panel);
+  border-left: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.inspector-header {
+  height: 36px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 16px;
+}
+
+.tab {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid transparent;
+  transition: var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--text-main);
+}
+
+.tab.active {
+  color: var(--text-main);
+  border-bottom-color: var(--text-main);
+}
+
+.inspector-actions {
+  margin-left: auto;
+}
+
+.log-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  font-family: 'JetBrains Mono', monospace; /* Keep mono for logs */
+  font-size: 10px;
+}
+
+.log-line {
+  margin-bottom: 6px;
+  word-break: break-all;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.log-line.error { color: var(--accent-pink); }
+.log-line.success { color: var(--accent-teal); }
+.log-line.info { color: var(--text-secondary); }
+.log-line.warning { color: #FFB020; }
 
 /* Status Indicator */
 .status-indicator-group {
@@ -177,53 +314,13 @@ body {
 }
 
 .status-dot.state-ok { background-color: var(--accent-teal); }
-.status-dot.state-busy { background-color: var(--primary); } /* Use Primary for busy? Or Orange? User said "Teal and Pink" accents. */
+.status-dot.state-busy { background-color: var(--primary); }
 .status-dot.state-warn { background-color: #FFB020; }
 .status-dot.state-error { background-color: var(--accent-pink); }
 
 .status-text {
   color: var(--text-secondary);
   font-weight: 400;
-}
-
-/* Main Content Area */
-.content-area {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Empty State */
-.empty-state {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  gap: 12px;
-}
-
-.empty-icon {
-  color: var(--border-subtle);
-}
-
-.btn-ghost {
-  background: none;
-  border: 1px solid var(--border-subtle);
-  color: var(--primary);
-  padding: 6px 12px;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 12px;
-  transition: var(--transition-fast);
-}
-
-.btn-ghost:hover {
-  border-color: var(--primary);
-  background-color: #F9F5FF;
 }
 
 /* Task List Items */
@@ -241,8 +338,8 @@ body {
 }
 
 .task-item:hover {
-  border-color: var(--border-subtle);
-  transform: translateY(-1px);
+  border-color: var(--primary); /* Highlight on hover like Figma selection */
+  box-shadow: 0 0 0 1px var(--primary);
 }
 
 .task-header {
@@ -259,7 +356,7 @@ body {
   text-transform: uppercase;
 }
 
-.task-status.pending { background-color: var(--bg-main); color: var(--text-secondary); }
+.task-status.pending { background-color: #F0F0F0; color: var(--text-secondary); }
 .task-status.running { background-color: #E5D4FF; color: var(--primary); }
 .task-status.completed { background-color: #E0FDF7; color: var(--accent-teal); }
 .task-status.failed { background-color: #FFE5EB; color: var(--accent-pink); }
@@ -285,8 +382,8 @@ body {
 }
 
 .task-actions button {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border: none;
   background: none;
   color: var(--text-tertiary);
@@ -295,57 +392,19 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .task-actions button:hover {
-  background-color: var(--bg-main);
+  background-color: #F0F0F0;
   color: var(--text-main);
 }
 
-/* Inspector Panel (Bottom Logs) */
-.inspector-panel {
-  height: 120px; /* Fixed height for bottom panel */
-  background-color: var(--bg-panel);
-  border-top: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
+.task-actions button i {
+  line-height: 1;
 }
 
-.inspector-header {
-  height: 32px;
-  padding: 0 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border-subtle);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background-color: #FAFAFA;
-}
-
-.log-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 12px;
-  font-family: 'JetBrains Mono', monospace; /* Keep mono for logs */
-  font-size: 10px;
-}
-
-.log-line {
-  margin-bottom: 4px;
-  word-break: break-all;
-  color: var(--text-secondary);
-}
-
-.log-line.error { color: var(--accent-pink); }
-.log-line.success { color: var(--accent-teal); }
-.log-line.info { color: var(--text-secondary); }
-.log-line.warning { color: #FFB020; }
-
-/* Modal Styles */
+/* Modal Styles - Figma Dialog Style */
 .modal {
   display: none;
   position: fixed;
@@ -353,11 +412,11 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 100;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(1px);
 }
 
 .modal.active {
@@ -366,17 +425,16 @@ body {
 
 .modal-content {
   background: var(--bg-panel);
-  width: 90%;
-  max-width: 400px;
-  border-radius: 8px; /* Slightly larger radius for modal */
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  width: 320px; /* Fixed narrow width for dialogs */
+  border-radius: 6px; 
+  box-shadow: 0 20px 50px rgba(0,0,0,0.2);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
 .modal-header {
-  padding: 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
@@ -384,7 +442,7 @@ body {
 }
 
 .modal-header h2 {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-main);
 }
@@ -392,9 +450,11 @@ body {
 .close-btn {
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 18px;
   color: var(--text-tertiary);
   cursor: pointer;
+  padding: 0;
+  display: flex;
 }
 
 .close-btn:hover {
@@ -414,43 +474,51 @@ body {
   font-size: 11px;
   font-weight: 500;
   color: var(--text-secondary);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .form-control {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--border-subtle);
+  padding: 8px 8px;
+  border: 1px solid transparent;
   border-radius: var(--radius);
   font-family: var(--font-sans);
   font-size: 12px;
   color: var(--text-main);
-  background: var(--bg-main);
+  background: #F0F0F0; /* Input background */
   transition: var(--transition-fast);
+}
+
+.form-control:hover {
+  box-shadow: inset 0 0 0 1px #E0E0E0;
 }
 
 .form-control:focus {
   outline: none;
-  border-color: var(--primary);
-  background: var(--bg-panel);
-  box-shadow: 0 0 0 2px rgba(157, 92, 255, 0.1);
+  background: #FFFFFF;
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
 }
 
 .modal-footer {
-  padding: 16px;
+  padding: 12px 16px;
   border-top: 1px solid var(--border-subtle);
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  background-color: #FAFAFA;
+  background-color: var(--bg-panel);
 }
 
 .btn-primary {
   background-color: var(--primary);
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: var(--radius);
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -459,7 +527,6 @@ body {
 
 .btn-primary:hover {
   background-color: var(--primary-hover);
-  transform: scale(1.02);
 }
 
 .btn-primary:active {
@@ -470,15 +537,15 @@ body {
   background-color: transparent;
   color: var(--text-main);
   border: 1px solid var(--border-subtle);
-  padding: 8px 16px;
-  border-radius: var(--radius);
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
   transition: var(--transition-fast);
 }
 
 .btn-secondary:hover {
-  background-color: var(--bg-main);
+  border-color: var(--text-tertiary);
 }
 
 /* Scrollbar */
@@ -490,9 +557,9 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #DDD;
+  background: #E0E0E0;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #CCC;
+  background: #CCCCCC;
 }

@@ -113,6 +113,15 @@ export class ChatGPTAdapter extends BaseAdapter {
    */
   async checkStatus(): Promise<TaskStatus> {
     try {
+      // 优先检查错误信息
+      const errorElement = document.querySelector('[role="alert"], .error-message');
+      if (errorElement) {
+        const errorText = errorElement.textContent?.trim() || '未知错误';
+        this.sendDebugLog('error', `❌ 检测到错误: ${errorText}`);
+        this.stopMonitoring();
+        return TaskStatus.FAILED;
+      }
+
       // 检查是否有停止按钮（生成中）
       const stopButton = document.querySelector(ChatGPTAdapter.SELECTORS.stopButton);
       if (stopButton) {
@@ -162,15 +171,6 @@ export class ChatGPTAdapter extends BaseAdapter {
       }
 
       this.lastResponseLength = currentLength;
-
-      // 检查错误信息
-      const errorElement = document.querySelector('[role="alert"], .error-message');
-      if (errorElement) {
-        const errorText = errorElement.textContent?.trim() || '未知错误';
-        this.sendDebugLog('error', `❌ 检测到错误: ${errorText}`);
-        this.stopMonitoring();
-        return TaskStatus.FAILED;
-      }
 
       return TaskStatus.RUNNING;
 

@@ -493,11 +493,11 @@ function renderTaskItem(task: Task): string {
       <div class="task-header">
         <span class="task-status ${task.status}">${statusText[task.status]}</span>
         <div class="task-actions">
-          ${task.status === TaskStatus.PENDING ? '<button class="start-task" title="开始执行">▶</button>' : ''}
-          ${task.status === TaskStatus.RUNNING ? '<button class="stop-task" title="暂停">⏸</button>' : ''}
-          ${task.status === TaskStatus.FAILED || task.status === TaskStatus.COMPLETED ? '<button class="retry-task" title="重试">🔄</button>' : ''}
-          ${task.status === TaskStatus.PENDING || task.status === TaskStatus.FAILED || task.status === TaskStatus.COMPLETED ? '<button class="edit-task" title="编辑">✏️</button>' : ''}
-          <button class="delete-task" title="删除">🗑</button>
+          ${task.status === TaskStatus.PENDING ? '<button class="start-task" title="开始执行"><i class="ri-play-fill"></i></button>' : ''}
+          ${task.status === TaskStatus.RUNNING ? '<button class="stop-task" title="暂停"><i class="ri-pause-fill"></i></button>' : ''}
+          ${task.status === TaskStatus.FAILED || task.status === TaskStatus.COMPLETED ? '<button class="retry-task" title="重试"><i class="ri-refresh-line"></i></button>' : ''}
+          ${task.status === TaskStatus.PENDING || task.status === TaskStatus.FAILED || task.status === TaskStatus.COMPLETED ? '<button class="edit-task" title="编辑"><i class="ri-edit-line"></i></button>' : ''}
+          <button class="delete-task" title="删除"><i class="ri-delete-bin-line"></i></button>
         </div>
       </div>
       <div class="task-content">${task.prompt}</div>
