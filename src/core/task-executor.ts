@@ -50,10 +50,13 @@ export class TaskExecutor {
    */
   private async executeSingleStep(): Promise<void> {
     // 标记任务为执行中
+    const startedAt = Date.now();
     await TaskStorage.updateTask(this.task.id, {
       status: TaskStatus.RUNNING,
-      startedAt: Date.now()
+      startedAt
     });
+    this.task.status = TaskStatus.RUNNING;
+    this.task.startedAt = startedAt;
 
     // 提交任务
     const submitted = await this.adapter.submitTask();
@@ -82,11 +85,15 @@ export class TaskExecutor {
     if (!this.task.steps) return;
 
     // 标记任务为执行中
+    const startedAt = Date.now();
     await TaskStorage.updateTask(this.task.id, {
       status: TaskStatus.RUNNING,
-      startedAt: Date.now(),
+      startedAt,
       currentStepIndex: 0
     });
+    this.task.status = TaskStatus.RUNNING;
+    this.task.startedAt = startedAt;
+    this.task.currentStepIndex = 0;
 
     // 依次执行每个步骤
     for (let i = 0; i < this.task.steps.length; i++) {
@@ -96,6 +103,7 @@ export class TaskExecutor {
       await TaskStorage.updateTask(this.task.id, {
         currentStepIndex: i
       });
+      this.task.currentStepIndex = i;
 
       // 执行当前步骤
       const success = await this.executeStep(i);
@@ -133,12 +141,14 @@ export class TaskExecutor {
    */
   private async executeStep(stepIndex: number): Promise<boolean> {
     try {
+      this.task.currentStepIndex = stepIndex;
       // 更新步骤状态为执行中
       await TaskStorage.updateStepStatus(
         this.task.id,
         stepIndex,
         TaskStatus.RUNNING
       );
+      this.updateLocalStep(stepIndex, TaskStatus.RUNNING);
 
       // 提交步骤内容
       const submitted = await this.adapter.submitTask();
@@ -161,6 +171,7 @@ export class TaskExecutor {
         stepIndex,
         TaskStatus.COMPLETED
       );
+      this.updateLocalStep(stepIndex, TaskStatus.COMPLETED);
 
       return true;
     } catch (error) {
@@ -171,6 +182,7 @@ export class TaskExecutor {
         TaskStatus.FAILED,
         errorMsg
       );
+      this.updateLocalStep(stepIndex, TaskStatus.FAILED, errorMsg);
       return false;
     }
   }
@@ -199,5 +211,23 @@ export class TaskExecutor {
 
       checkStatus();
     });
+  }
+
+  /**
+   * 更新当前实例中的步骤状态，保证适配器读取的 step index 与状态同步
+   */
+  private updateLocalStep(stepIndex: number, status: TaskStatus, error?: string): void {
+    if (!this.task.steps || !this.task.steps[stepIndex]) return;
+    const step = this.task.steps[stepIndex];
+    step.status = status;
+    if (error) {
+      step.error = error;
+    }
+    if (status === TaskStatus.RUNNING) {
+      step.startedAt = Date.now();
+    }
+    if (status === TaskStatus.COMPLETED || status === TaskStatus.FAILED) {
+      step.completedAt = Date.now();
+    }
   }
 }

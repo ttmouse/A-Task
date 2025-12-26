@@ -17,8 +17,8 @@ export class AdapterFactory {
    * @param task 任务对象
    * @returns 对应网站的适配器实例
    */
-  static create(task: Task): BaseAdapter {
-    switch (task.siteType) {
+  static create(siteType: SiteType, task: Task): BaseAdapter {
+    switch (siteType) {
       case SiteType.GEMINI:
         return new GeminiAdapter(task);
 
@@ -26,7 +26,7 @@ export class AdapterFactory {
         return new ChatGPTAdapter(task);
 
       default:
-        throw new Error(`不支持的网站类型: ${task.siteType}`);
+        throw new Error(`不支持的网站类型: ${siteType}`);
     }
   }
 

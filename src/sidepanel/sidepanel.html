@@ -79,7 +79,7 @@
             <span class="tab active">Console</span>
             <span class="tab">Inspect</span>
             <div class="inspector-actions">
-              <button class="icon-btn-xs" title="Clear" onclick="document.querySelector('#debugContent').innerHTML=''">
+              <button class="icon-btn-xs" title="Clear" onclick="clearDebugLogs()">
                 <i class="ri-delete-bin-7-line"></i>
               </button>
             </div>
@@ -103,13 +103,6 @@
         <!-- 隐藏字段：正在编辑的任务 ID -->
         <input type="hidden" id="editingTaskId" value="">
 
-        <div class="form-group">
-          <label for="siteSelect">目标网站</label>
-          <select id="siteSelect" class="form-control">
-            <option value="gemini">Gemini</option>
-            <option value="chatgpt" disabled>ChatGPT (即将支持)</option>
-          </select>
-        </div>
         <div class="form-group">
           <label for="taskTypeSelect">任务类型</label>
           <select id="taskTypeSelect" class="form-control">

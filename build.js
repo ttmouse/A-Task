@@ -43,9 +43,9 @@ async function build() {
     // Content Scripts 不支持 ES6 模块，需要打包成 IIFE
     console.log('📦 构建 Content Scripts (IIFE)...');
     await esbuild.build({
-      entryPoints: ['src/content-gemini.ts'],
+      entryPoints: ['src/content.ts'],
       bundle: true,
-      outfile: 'dist/content-gemini.js',
+      outfile: 'dist/content.js',
       format: 'iife',  // Content Scripts 需要 IIFE
       platform: 'browser',
       target: 'es2020',

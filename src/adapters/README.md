@@ -12,7 +12,7 @@
 
 - `base-adapter.ts` - **[Interface Definer]** - 定义适配器接口契约，所有具体适配器的抽象基类
 - `adapter-factory.ts` - **[Factory]** - 工厂类，根据站点类型创建对应适配器实例
-- `chatgpt-adapter.ts` - **[Concrete Implementor]** - ChatGPT 站点适配器，处理 ChatGPT 特有的 DOM 结构和交互逻辑
+- `chatgpt-adapter.ts` - **[Concrete Implementor]** - ChatGPT 站点适配器，处理 ProseMirror 输入框、Composer 状态检测（发送/停止）等专有交互
 - `gemini-adapter.ts` - **[Concrete Implementor]** - Gemini 站点适配器，处理 Gemini 特有的 DOM 结构和交互逻辑（含双重稳定检测机制）
 
 ## 设计模式

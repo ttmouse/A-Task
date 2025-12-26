@@ -41,6 +41,13 @@ export abstract class BaseAdapter {
   abstract cleanup(): Promise<void>;
 
   /**
+   * 停止当前任务（默认退回 cleanup，可由子类重写执行更具体的停止逻辑）
+   */
+  async stopCurrentTask(): Promise<void> {
+    await this.cleanup();
+  }
+
+  /**
    * AIDEV-NOTE: 提交任务 - 支持多步骤任务
    * 如果任务有多个步骤，提交当前步骤的内容
    * 如果是单步骤任务，提交整个 prompt

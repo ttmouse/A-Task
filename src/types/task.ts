@@ -32,7 +32,6 @@ export interface TaskStep {
 // 任务接口
 export interface Task {
   id: string;                    // 唯一标识
-  siteType: SiteType;           // 目标网站
   taskType: TaskType;           // 任务类型
   prompt: string;               // 原始提示词内容（可能包含分割线）
   status: TaskStatus;           // 任务状态

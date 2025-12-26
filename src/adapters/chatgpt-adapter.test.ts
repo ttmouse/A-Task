@@ -26,7 +26,9 @@ describe('ChatGPTAdapter.checkStatus with realistic HTML', () => {
   `;
 
   beforeEach(() => {
-    const dom = new JSDOM();
+    const dom = new JSDOM(`<!DOCTYPE html><html><body></body></html>`);
+    // @ts-expect-error - 赋值给 Node 环境的全局 window 以支持 DOM API
+    global.window = dom.window;
     global.document = dom.window.document;
     adapter = new ChatGPTAdapter(task);
     // Reset mocks
@@ -62,6 +64,23 @@ describe('ChatGPTAdapter.checkStatus with realistic HTML', () => {
     // 4th check should result in COMPLETED
     const status = await adapter.checkStatus();
     expect(status).toBe(TaskStatus.COMPLETED);
+  });
+
+  it('should submit content through ProseMirror input and click send button', async () => {
+    document.body.innerHTML = `
+      <div id="prompt-textarea" class="ProseMirror" contenteditable="true">
+        <p class="placeholder" data-placeholder="询问任何问题"><br class="ProseMirror-trailingBreak"></p>
+      </div>
+      <button id="composer-submit-button" data-testid="send-button"></button>
+    `;
+
+    const button = document.querySelector('#composer-submit-button') as HTMLButtonElement;
+    const clickSpy = vi.spyOn(button, 'click').mockImplementation(() => {});
+
+    const submitted = await adapter.submitContent('支持状态检控');
+    expect(submitted).toBe(true);
+    expect(document.querySelector('#prompt-textarea')?.textContent).toContain('支持状态检控');
+    expect(clickSpy).toHaveBeenCalled();
   });
 
 });

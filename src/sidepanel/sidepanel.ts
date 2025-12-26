@@ -29,7 +29,6 @@ const manualPageStatusBtnDefaultHtml = checkPageStatusBtn.innerHTML;
 const debugContent = document.getElementById('debugContent') as HTMLDivElement;
 
 // 表单元素
-const siteSelect = document.getElementById('siteSelect') as HTMLSelectElement;
 const taskTypeSelect = document.getElementById('taskTypeSelect') as HTMLSelectElement;
 const promptInput = document.getElementById('promptInput') as HTMLTextAreaElement;
 const maxRetriesInput = document.getElementById('maxRetriesInput') as HTMLInputElement;
@@ -122,7 +121,19 @@ async function init() {
     if (message.type === 'INPUT_STATUS_UPDATE') {
       updateInputStatus(message.state as InputIndicatorState, message.detail);
     }
+    if (message.type === 'RELOAD_TASKS') { // <-- 新增监听器
+      console.log('[Sidepanel] Received RELOAD_TASKS command, reloading...');
+      loadTasks();
+    }
   });
+}
+
+// 暴露 clearDebugLogs 到全局，供 HTML 调用
+(window as any).clearDebugLogs = clearDebugLogs;
+
+function clearDebugLogs() { // <-- 新函数定义
+  debugContent.innerHTML = '<div class="log-empty">System ready...</div>';
+  debugContent.scrollTop = 0; // 滚动到顶部
 }
 
 /**
@@ -462,11 +473,6 @@ function renderTaskItem(task: Task): string {
     [TaskStatus.FAILED]: '失败'
   };
 
-  const siteText = {
-    [SiteType.GEMINI]: 'Gemini',
-    [SiteType.CHATGPT]: 'ChatGPT'
-  };
-
   const taskTypeText = {
     [TaskType.TEXT]: '文本',
     [TaskType.IMAGE]: '图片'
@@ -503,7 +509,6 @@ function renderTaskItem(task: Task): string {
       </div>
       <div class="task-content">${task.prompt}</div>
       <div class="task-meta">
-        <span>${siteText[task.siteType]}</span>
         <span>${taskTypeText[task.taskType]}</span>
         <span>${createdDate}</span>
         ${stepInfo}
@@ -672,7 +677,6 @@ async function handleSubmitTask() {
   if (isEditMode) {
     // 编辑模式：更新现有任务
     await TaskStorage.updateTask(editingTaskId, {
-      siteType: siteSelect.value as SiteType,
       taskType: taskTypeSelect.value as TaskType,
       prompt,
       maxRetries: parseInt(maxRetriesInput.value),
@@ -688,7 +692,6 @@ async function handleSubmitTask() {
     // 新增模式：创建新任务
     const newTask: Task = {
       id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      siteType: siteSelect.value as SiteType,
       taskType: taskTypeSelect.value as TaskType,
       prompt,
       status: TaskStatus.PENDING,
@@ -786,7 +789,6 @@ async function editTask(taskId: string) {
   editingTaskIdInput.value = taskId;
 
   // 填充表单
-  siteSelect.value = task.siteType;
   taskTypeSelect.value = task.taskType;
   promptInput.value = task.prompt;
   maxRetriesInput.value = task.maxRetries.toString();
@@ -808,10 +810,10 @@ function openExtensionPage() {
  * 添加调试日志
  */
 function addDebugLog(level: 'info' | 'success' | 'warning' | 'error', message: string) {
-  const emptyMsg = debugContent.querySelector('.log-empty');
-  if (emptyMsg) {
-    emptyMsg.remove();
-  }
+  // const emptyMsg = debugContent.querySelector('.log-empty'); // <-- REMOVE THIS LINE
+  // if (emptyMsg) { // <-- REMOVE THIS LINE
+  //   emptyMsg.remove(); // <-- REMOVE THIS LINE
+  // }
 
   const time = new Date().toLocaleTimeString('zh-CN', {
     hour12: false,

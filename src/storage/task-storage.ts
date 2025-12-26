@@ -13,6 +13,14 @@ const STORAGE_KEY = 'a-task-queue';
 
 export class TaskStorage {
   /**
+   * 获取单个任务
+   */
+  static async getTask(taskId: string): Promise<Task | null> {
+    const tasks = await this.getAllTasks();
+    return tasks.find(t => t.id === taskId) || null;
+  }
+
+  /**
    * 获取所有任务
    */
   static async getAllTasks(): Promise<Task[]> {
