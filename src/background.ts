@@ -45,6 +45,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       broadcastPageStatus(message.status, message.taskId, 'task');
       break;
 
+    case 'STEP_PROGRESS':
+      // Forward step progress to sidepanel for UI update
+      handleStepProgress(message.taskId, message.stepIndex, message.totalSteps);
+      break;
+
     case 'OPEN_EXTENSION_PAGE':
       handleOpenExtensionPage();
       break;
@@ -125,7 +130,7 @@ async function forwardDebugLog(message: any) {
 /**
  * 辅助函数：获取当前激活的、且是受支持的网站标签页
  */
-async function getActiveSupportedSite(): Promise<{siteType: SiteType, tabId: number} | null> {
+async function getActiveSupportedSite(): Promise<{ siteType: SiteType, tabId: number } | null> {
   // AIDEV-NOTE: 使用数组来支持一个网站有多个域名
   const siteUrlPatterns: Record<SiteType, string[]> = {
     [SiteType.GEMINI]: ['https://gemini.google.com/'],
@@ -292,7 +297,7 @@ async function handleStartTask(taskId: string) {
  */
 async function handleStopTask(taskId: string): Promise<{ success: boolean; error?: string }> {
   console.log('[Background] 暂停任务:', taskId);
-  
+
   if (currentTask && currentTask.id === taskId) {
     console.log('[Background] currentTask 匹配，通知 content script 停止');
     try {
@@ -320,75 +325,40 @@ async function handleStopTask(taskId: string): Promise<{ success: boolean; error
 
 /**
  * 处理任务状态更新
+ * AIDEV-NOTE: Simplified - multi-step logic now handled by content.ts
  */
 async function handleTaskStatusUpdate(taskId: string, status: TaskStatus) {
   console.log('[Background] 任务状态更新:', taskId, status);
 
-  if (status === TaskStatus.COMPLETED && currentTask?.id === taskId) {
-    console.log('[Background] 步骤完成，检查是否有下一步');
-    const task = await TaskStorage.getTask(taskId);
+  await TaskStorage.updateTask(taskId, {
+    status,
+    ...(status === TaskStatus.COMPLETED || status === TaskStatus.FAILED
+      ? { completedAt: Date.now() }
+      : {})
+  });
 
-    if (task?.steps && task.steps.length > 1) {
-      const currentStepIndex = task.currentStepIndex || 0;
-      await TaskStorage.updateStepStatus(taskId, currentStepIndex, TaskStatus.COMPLETED);
-
-      const hasNextStep = await TaskStorage.moveToNextStep(taskId);
-
-      if (hasNextStep) {
-        console.log('[Background] 开始执行下一步:', currentStepIndex + 1);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const updatedTask = await TaskStorage.getTask(taskId);
-        if (updatedTask) {
-          try {
-            // 复用 currentTask 的 siteType 来执行下一步
-            const response = await sendMessageToContentScript(currentTask.siteType, {
-              type: 'SUBMIT_TASK',
-              task: updatedTask,
-              siteType: currentTask.siteType
-            });
-
-            if (!response?.success) {
-              throw new Error(response?.error || '提交下一步失败');
-            }
-            console.log('[Background] 下一步已提交');
-          } catch (error) {
-            console.error('[Background] 执行下一步失败:', error);
-            await TaskStorage.updateTask(taskId, {
-              status: TaskStatus.FAILED,
-              error: error instanceof Error ? error.message : '执行下一步失败'
-            });
-            currentTask = null;
-          }
-        }
-        return; 
-      }
-    }
-    
-    // 所有步骤完成或单步骤任务完成
-    await TaskStorage.updateTask(taskId, {
-      status: TaskStatus.COMPLETED,
-      completedAt: Date.now()
-    });
-    console.log('[Background] 任务完成:', taskId);
-    currentTask = null;
-
-    // 主动通知 UI 刷新
-    chrome.runtime.sendMessage({ type: 'RELOAD_TASKS' });
-
-  } else if (status === TaskStatus.FAILED) {
-    await TaskStorage.updateTask(taskId, { status });
-    console.log('[Background] 任务失败:', taskId);
+  if (status === TaskStatus.COMPLETED || status === TaskStatus.FAILED) {
+    console.log(`[Background] 任务${status === TaskStatus.COMPLETED ? '完成' : '失败'}:`, taskId);
     if (currentTask?.id === taskId) {
       currentTask = null;
     }
     // 主动通知 UI 刷新
     chrome.runtime.sendMessage({ type: 'RELOAD_TASKS' });
-    
-  } else {
-    // 其他状态更新 (e.g., PENDING -> RUNNING)
-    await TaskStorage.updateTask(taskId, { status });
   }
+}
+
+/**
+ * 处理步骤进度更新（多步骤任务）
+ */
+async function handleStepProgress(taskId: string, stepIndex: number, totalSteps: number) {
+  console.log(`[Background] 步骤进度: ${stepIndex + 1}/${totalSteps}`);
+
+  // Update step status in storage
+  await TaskStorage.updateStepStatus(taskId, stepIndex, TaskStatus.COMPLETED);
+  await TaskStorage.updateTask(taskId, { currentStepIndex: stepIndex + 1 });
+
+  // Notify UI to refresh
+  chrome.runtime.sendMessage({ type: 'RELOAD_TASKS' });
 }
 
 /**
@@ -403,7 +373,7 @@ async function executeTask(task: Task) {
     if (!activeSite) {
       throw new Error(`请先打开并激活一个受支持的 AI 网站页面 (ChatGPT 或 Gemini)。`);
     }
-    
+
     const { siteType, tabId } = activeSite;
     console.log(`[Background] 检测到激活的网站: ${siteType}, Tab ID: ${tabId}`);
 
@@ -421,7 +391,7 @@ async function executeTask(task: Task) {
       status: TaskStatus.RUNNING,
       startedAt: Date.now()
     });
-    
+
     // 向 content script 发送带有 siteType 的指令
     const response = await chrome.tabs.sendMessage(tabId, {
       type: 'SUBMIT_TASK',
@@ -438,7 +408,7 @@ async function executeTask(task: Task) {
   } catch (error) {
     console.error('[Background] 执行任务失败:', error);
     const errorMessage = error instanceof Error ? error.message : '未知错误';
-    
+
     await TaskStorage.updateTask(task.id, {
       status: TaskStatus.FAILED,
       error: errorMessage

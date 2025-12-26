@@ -67,6 +67,7 @@ function setStatusText(
 }
 
 // 事件监听
+// 事件监听
 panelTitle.addEventListener('click', openExtensionPage);
 guideBtn.addEventListener('click', openGuide);
 addTaskBtn.addEventListener('click', openModal);
@@ -75,6 +76,12 @@ cancelBtn.addEventListener('click', closeModal);
 submitTaskBtn.addEventListener('click', handleSubmitTask);
 manualInjectBtn.addEventListener('click', handleManualInject);
 checkPageStatusBtn.addEventListener('click', handleManualPageStatusCheck);
+
+// Log Panel
+const clearLogsBtn = document.getElementById('clearLogsBtn') as HTMLButtonElement;
+if (clearLogsBtn) {
+  clearLogsBtn.addEventListener('click', clearDebugLogs);
+}
 
 // 初始化
 setManualPageStatusCheckEnabled(false);
@@ -128,8 +135,7 @@ async function init() {
   });
 }
 
-// 暴露 clearDebugLogs 到全局，供 HTML 调用
-(window as any).clearDebugLogs = clearDebugLogs;
+
 
 function clearDebugLogs() { // <-- 新函数定义
   debugContent.innerHTML = '<div class="log-empty">System ready...</div>';

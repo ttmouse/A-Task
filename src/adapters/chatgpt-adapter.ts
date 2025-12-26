@@ -108,9 +108,13 @@ export class ChatGPTAdapter extends BaseAdapter {
     });
   }
 
+  // 增加状态追踪
+  private hasSeenBusyState = false;
+
   /**
    * 检查任务状态
    * AIDEV-NOTE: ChatGPT 通过检测停止按钮来判断是否在生成中
+   * 关键改进：'idle' 状态（无停止按钮+提交按钮禁用）= 生成完毕
    */
   async checkStatus(): Promise<TaskStatus> {
     try {
@@ -127,14 +131,26 @@ export class ChatGPTAdapter extends BaseAdapter {
 
       if (composerState === 'streaming') {
         this.sendDebugLog('info', '⏳ 检测到停止按钮，正在生成...');
+        this.hasSeenBusyState = true;  // 记录已进入生成状态
         this.stableCheckCount = 0;
         return TaskStatus.RUNNING;
       }
 
-      if (composerState === 'ready') {
-        const submitButton = document.querySelector(ChatGPTAdapter.SELECTORS.submitButton) as HTMLButtonElement | null;
-        if (submitButton && this.isButtonEnabled(submitButton)) {
+      // AIDEV-NOTE: 关键修复 - 'idle' 或 'ready' 状态都表示生成完毕
+      // 'idle' = 停止按钮消失 + 提交按钮禁用（输入框空）= 生成完毕，待输入
+      // 'ready' = 停止按钮消失 + 提交按钮可用（输入框有内容）= 生成完毕
+      if (this.hasSeenBusyState) {
+        // 只有之前进入过生成状态，现在退出，才判定完成
+        if (composerState === 'idle') {
+          this.sendDebugLog('success', '✅ 停止按钮消失，页面已空闲（提交按钮禁用），生成完成');
+          this.hasSeenBusyState = false;
+          this.stopMonitoring();
+          return TaskStatus.COMPLETED;
+        }
+
+        if (composerState === 'ready') {
           this.sendDebugLog('success', '✅ 提交按钮已激活，生成完成');
+          this.hasSeenBusyState = false;
           this.stopMonitoring();
           return TaskStatus.COMPLETED;
         }
@@ -146,13 +162,15 @@ export class ChatGPTAdapter extends BaseAdapter {
         const display = window.getComputedStyle(loadingIndicator).display;
         if (display !== 'none') {
           this.sendDebugLog('info', '⏳ 检测到加载指示器...');
+          this.hasSeenBusyState = true;
           return TaskStatus.RUNNING;
         }
       }
 
-      // 文本稳定性检测
+      // 文本稳定性检测（兜底）
       const latestResponse = document.querySelector(ChatGPTAdapter.SELECTORS.latestResponse);
       if (!latestResponse) {
+        // 还没有响应，但也没有停止按钮，可能刚提交还没开始
         this.sendDebugLog('info', '⏳ 等待响应出现...');
         return TaskStatus.RUNNING;
       }
@@ -254,6 +272,7 @@ export class ChatGPTAdapter extends BaseAdapter {
     this.lastResponseLength = 0;
     this.stableCheckCount = 0;
     this.lastMutationTime = 0;
+    this.hasSeenBusyState = false;
 
     // 清空输入框
     try {
