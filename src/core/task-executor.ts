@@ -1,7 +1,7 @@
-// INPUT: ../types/task.js (Task, TaskStatus), ../storage/task-storage.js (TaskStorage), ../adapters/base-adapter.js (BaseAdapter)
-// OUTPUT: TaskExecutor 类，提供任务执行引擎（execute, executeMultiStep 等方法）
-// POS: 核心业务层，协调适配器和存储层，被 background.ts 和 content scripts 调用
-// 一旦本文件被修改，请更新此注释并同步更新 /src/core/README.md
+// [IN]: Task Object, Storage, Adapter
+// [OUT]: Execution Flow Control, Status Updates
+// [POS]: Core Layer / Workflow Orchestrator
+// Protocol: When updated, sync this header + src/core/.folder.md
 
 import { Task, TaskStatus } from '../types/task.js';
 import { TaskStorage } from '../storage/task-storage.js';

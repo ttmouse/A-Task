@@ -1,3 +1,8 @@
+// [IN]: DOM, chrome.runtime messages, AdapterFactory
+// [OUT]: Page Interaction, Status Updates
+// [POS]: Browser Context / Script Injection Agent
+// Protocol: When updated, sync this header + src/.folder.md
+
 import { AdapterFactory } from './adapters/adapter-factory.js';
 import { BaseAdapter } from './adapters/base-adapter.js';
 import { Task, TaskStatus, SiteType } from './types/task.js';
@@ -27,11 +32,18 @@ let currentAdapter: BaseAdapter | null = null;
 let currentTask: Task | null = null;
 let currentSiteType: SiteType | null = null;
 let currentStepIndex: number = 0;
-let statusCheckInterval: number | null = null;
+// let currentStepIndex: number = 0; // Removed duplicate
+let monitoringTimer: number | null = null;
+let lastMonitoringTick: number = 0;
+let watchdogInterval: number | null = null;
 
 // --- Utility Functions ---
 function sendDebugLog(level: 'info' | 'success' | 'warning' | 'error', message: string) {
-  chrome.runtime.sendMessage({ type: 'DEBUG_LOG', level, message });
+  try {
+    chrome.runtime.sendMessage({ type: 'DEBUG_LOG', level, message });
+  } catch (e) {
+    console.error('[A-Task] Failed to send debug log:', e);
+  }
 }
 
 function isMultiStepTask(): boolean {
@@ -123,9 +135,9 @@ async function handleCheckStatus(): Promise<{ status: TaskStatus; reason?: strin
 
 async function handleStopTask(): Promise<{ success: boolean; error?: string }> {
   try {
-    if (statusCheckInterval) {
-      clearInterval(statusCheckInterval);
-      statusCheckInterval = null;
+    if (monitoringTimer) {
+      clearTimeout(monitoringTimer);
+      monitoringTimer = null;
     }
 
     if (!currentAdapter) {
@@ -154,16 +166,29 @@ function cleanupTaskState() {
   currentTask = null;
   currentSiteType = null;
   currentStepIndex = 0;
+  if (watchdogInterval) {
+    clearInterval(watchdogInterval);
+    watchdogInterval = null;
+  }
+  if (monitoringTimer) {
+    clearTimeout(monitoringTimer);
+    monitoringTimer = null;
+  }
 }
 
 /**
  * AIDEV-NOTE: Handle step completion for multi-step tasks
  * If more steps exist, submit the next step directly without round-tripping through background
  */
-async function handleStepComplete(taskId: string): Promise<void> {
+/**
+ * AIDEV-NOTE: Execute the next step in the multi-step task
+ * This function is called BY the monitoring loop when the previous step is complete.
+ * It returns true if the next step was submitted successfully, false otherwise.
+ */
+async function executeNextStep(taskId: string): Promise<boolean> {
   if (!currentTask || !currentAdapter || !currentSiteType) {
     sendDebugLog('error', '❌ 步骤完成但状态丢失');
-    return;
+    return false;
   }
 
   // Notify background of step completion (for UI update)
@@ -175,113 +200,158 @@ async function handleStepComplete(taskId: string): Promise<void> {
     status: 'completed'
   });
 
-  if (hasMoreSteps()) {
-    // Move to next step
-    currentStepIndex++;
-    sendDebugLog('success', `🎉 步骤 ${currentStepIndex}/${getTotalSteps()} 完成，准备执行下一步...`);
+  if (!hasMoreSteps()) {
+    // Should not be called if no more steps, but handle gracefully
+    return true; // "Success" in the sense that we are done
+  }
 
-    // Wait a bit for the page to settle
-    await new Promise(resolve => setTimeout(resolve, 2000));
+  // Move to next step
+  currentStepIndex++;
+  sendDebugLog('success', `🎉 步骤 ${currentStepIndex}/${getTotalSteps()} 完成，准备执行下一步...`);
 
+  // Wait a bit for the page to settle
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  try {
     // Clean up adapter state for next step
     await currentAdapter.cleanup();
 
     // Update task's currentStepIndex for the adapter
     currentTask.currentStepIndex = currentStepIndex;
 
-    // Re-create adapter with updated task (pointing to next step)
-    try {
-      currentAdapter = AdapterFactory.create(currentSiteType, currentTask);
+    // Re-create adapter with updated task
+    currentAdapter = AdapterFactory.create(currentSiteType, currentTask);
 
-      const success = await currentAdapter.submitTask();
-      if (!success) {
-        sendDebugLog('error', `❌ 步骤 ${currentStepIndex + 1} 提交失败`);
+    // Race against a timeout to prevent hanging
+    const submitPromise = currentAdapter.submitTask();
+    const timeoutPromise = new Promise<{ timeout: true }>((resolve) =>
+      setTimeout(() => resolve({ timeout: true }), 30000)
+    );
+
+    const result = await Promise.race([submitPromise, timeoutPromise]);
+
+    if ((result as any).timeout) {
+      sendDebugLog('error', `❌ 步骤 ${currentStepIndex + 1} 提交超时 (30s)`);
+      return false;
+    }
+
+    const success = result as boolean;
+    if (!success) {
+      sendDebugLog('error', `❌ 步骤 ${currentStepIndex + 1} 提交失败`);
+      chrome.runtime.sendMessage({
+        type: 'TASK_STATUS_UPDATE',
+        taskId,
+        status: TaskStatus.FAILED
+      });
+      return false;
+    }
+
+    sendDebugLog('success', `✅ 步骤 ${currentStepIndex + 1}/${getTotalSteps()} 已提交`);
+    return true;
+
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : '执行下一步失败';
+    sendDebugLog('error', `❌ ${errorMsg}`);
+    chrome.runtime.sendMessage({
+      type: 'TASK_STATUS_UPDATE',
+      taskId,
+      status: TaskStatus.FAILED
+    });
+    return false;
+  }
+}
+
+function scheduleStatusCheck(taskId: string, delay: number = 2000) {
+  console.log(`[A-Task] scheduleStatusCheck called with delay=${delay}ms`);
+  sendDebugLog('info', `⏱️ 安排下次状态检查 (${delay}ms 后)`); // DEBUG TRACE
+
+  if (monitoringTimer) {
+    clearTimeout(monitoringTimer);
+  }
+
+  if (!currentAdapter) {
+    sendDebugLog('warning', '⚠️ 监控循环结束 (无 active adapter)');
+    return;
+  }
+
+  monitoringTimer = window.setTimeout(async () => {
+    try {
+      if (!currentAdapter) return;
+      lastMonitoringTick = Date.now(); // Watchdog Heartbeat
+
+      console.log('[A-Task] Monitoring Tick (Recursive)...');
+      const status = await currentAdapter.checkStatus();
+
+      if (status === TaskStatus.COMPLETED) {
+        if (isMultiStepTask() && hasMoreSteps()) {
+          // MULTI-STEP TRANSITION
+          sendDebugLog('info', '🔄 当前步骤完成，准备执行下一步...');
+          const success = await executeNextStep(taskId);
+          if (success) {
+            // Continue loop for next step
+            console.log('[A-Task] executeNextStep returned true, scheduling next check...');
+            sendDebugLog('info', '✅ 步骤提交成功，继续监控...');
+            scheduleStatusCheck(taskId, 2000);
+          } else {
+            // Failed to execute next step, executeNextStep already logged error
+            cleanupTaskState();
+          }
+        } else {
+          // ALL DONE
+          sendDebugLog('success', `🎉 任务完成！`);
+          chrome.runtime.sendMessage({
+            type: 'TASK_STATUS_UPDATE',
+            taskId,
+            status: TaskStatus.COMPLETED
+          });
+          cleanupTaskState();
+        }
+      } else if (status === TaskStatus.FAILED) {
+        // FAILED
+        sendDebugLog('error', `❌ 任务失败`);
         chrome.runtime.sendMessage({
           type: 'TASK_STATUS_UPDATE',
           taskId,
           status: TaskStatus.FAILED
         });
         cleanupTaskState();
-        return;
+      } else {
+        // RUNNING - Continue loop
+        scheduleStatusCheck(taskId, 2000);
       }
-
-      sendDebugLog('success', `✅ 步骤 ${currentStepIndex + 1}/${getTotalSteps()} 已提交`);
-      // Continue monitoring - don't restart interval, it's still running
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : '执行下一步失败';
-      sendDebugLog('error', `❌ ${errorMsg}`);
-      chrome.runtime.sendMessage({
-        type: 'TASK_STATUS_UPDATE',
-        taskId,
-        status: TaskStatus.FAILED
-      });
-      cleanupTaskState();
+    } catch (e) {
+      console.error('[A-Task] Monitoring loop error:', e);
+      sendDebugLog('error', `❌ 监控循环异常: ${e}`);
+      // Retry once or stop? Retry for robustness
+      scheduleStatusCheck(taskId, 5000);
     }
-  } else {
-    // All steps completed
-    sendDebugLog('success', `🎉 任务完成！共 ${getTotalSteps()} 个步骤全部执行完毕`);
-
-    // Notify background of final completion
-    chrome.runtime.sendMessage({
-      type: 'TASK_STATUS_UPDATE',
-      taskId,
-      status: TaskStatus.COMPLETED
-    });
-
-    if (statusCheckInterval) {
-      clearInterval(statusCheckInterval);
-      statusCheckInterval = null;
-    }
-    cleanupTaskState();
-  }
+  }, delay);
 }
 
 function startStatusMonitoring(taskId: string) {
-  if (statusCheckInterval) {
-    clearInterval(statusCheckInterval);
-  }
+  sendDebugLog('info', `🚀 启动递归监控循环`);
+  lastMonitoringTick = Date.now();
+  scheduleStatusCheck(taskId, 1000);
 
-  statusCheckInterval = window.setInterval(async () => {
+  // Start Watchdog
+  if (watchdogInterval) clearInterval(watchdogInterval);
+  watchdogInterval = window.setInterval(() => {
+    const timeSinceLastTick = Date.now() - lastMonitoringTick;
+    console.log(`[A-Task] Watchdog tick. timeSinceLastTick=${timeSinceLastTick}ms, adapter=${!!currentAdapter}`);
+
     if (!currentAdapter) {
-      if (statusCheckInterval) clearInterval(statusCheckInterval);
+      console.log('[A-Task] Watchdog stopping: no adapter');
+      clearInterval(watchdogInterval!);
+      watchdogInterval = null;
       return;
     }
-
-    const status = await currentAdapter.checkStatus();
-
-    if (status === TaskStatus.COMPLETED) {
-      // AIDEV-NOTE: Don't release adapter immediately!
-      // Check if this is a multi-step task with more steps
-      if (isMultiStepTask()) {
-        // Handle multi-step: don't notify background yet, handle locally
-        if (statusCheckInterval) clearInterval(statusCheckInterval);
-        statusCheckInterval = null;
-        await handleStepComplete(taskId);
-      } else {
-        // Single step task - notify and cleanup
-        sendDebugLog('success', `🎉 Task completed.`);
-        chrome.runtime.sendMessage({
-          type: 'TASK_STATUS_UPDATE',
-          taskId,
-          status
-        });
-        if (statusCheckInterval) clearInterval(statusCheckInterval);
-        statusCheckInterval = null;
-        cleanupTaskState();
-      }
-    } else if (status === TaskStatus.FAILED) {
-      sendDebugLog('error', `❌ Task failed.`);
-      chrome.runtime.sendMessage({
-        type: 'TASK_STATUS_UPDATE',
-        taskId,
-        status
-      });
-      if (statusCheckInterval) clearInterval(statusCheckInterval);
-      statusCheckInterval = null;
-      cleanupTaskState();
+    if (timeSinceLastTick > 8000) {
+      sendDebugLog('warning', '🐕 看门狗检测到监控停滞，正在重启监控...');
+      console.warn('[A-Task] Watchdog detected stall. Restarting loop.');
+      lastMonitoringTick = Date.now();
+      scheduleStatusCheck(taskId, 1000);
     }
-    // For RUNNING status, just continue monitoring (don't spam background)
-  }, 2000); // Check every 2 seconds
+  }, 4000);
 }
 
 sendDebugLog('info', '✅ A-Task content script is ready and listening.');

@@ -13,6 +13,16 @@ const submitTaskBtn = document.getElementById('submitTaskBtn') as HTMLButtonElem
 const taskList = document.getElementById('taskList') as HTMLDivElement;
 const emptyState = document.getElementById('emptyState') as HTMLDivElement;
 
+// 搜索元素
+const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+const clearSearchBtn = document.getElementById('clearSearchBtn') as HTMLButtonElement;
+let currentSearchQuery = '';
+let allTasks: Task[] = []; // 缓存所有任务以便搜索
+
+// 快捷录入元素
+const quickInput = document.getElementById('quickInput') as HTMLTextAreaElement;
+const quickSubmitBtn = document.getElementById('quickSubmitBtn') as HTMLButtonElement;
+
 // 连接状态元素
 const statusConnectionDot = document.getElementById('statusConnectionDot') as HTMLSpanElement;
 const statusConnectionText = document.getElementById('statusConnectionText') as HTMLSpanElement;
@@ -27,6 +37,8 @@ const manualPageStatusBtnDefaultHtml = checkPageStatusBtn.innerHTML;
 
 // 日志元素
 const debugContent = document.getElementById('debugContent') as HTMLDivElement;
+const logPanel = document.getElementById('logPanel') as HTMLElement;
+const toggleConsoleBtn = document.getElementById('toggleConsoleBtn') as HTMLButtonElement;
 
 // 表单元素
 const taskTypeSelect = document.getElementById('taskTypeSelect') as HTMLSelectElement;
@@ -76,11 +88,29 @@ cancelBtn.addEventListener('click', closeModal);
 submitTaskBtn.addEventListener('click', handleSubmitTask);
 manualInjectBtn.addEventListener('click', handleManualInject);
 checkPageStatusBtn.addEventListener('click', handleManualPageStatusCheck);
+toggleConsoleBtn.addEventListener('click', toggleConsole);
 
 // Log Panel
 const clearLogsBtn = document.getElementById('clearLogsBtn') as HTMLButtonElement;
 if (clearLogsBtn) {
   clearLogsBtn.addEventListener('click', clearDebugLogs);
+}
+
+// 搜索事件监听
+if (searchInput) {
+  searchInput.addEventListener('input', handleSearchInput);
+}
+if (clearSearchBtn) {
+  clearSearchBtn.addEventListener('click', handleClearSearch);
+}
+
+// 快捷录入事件监听
+if (quickInput) {
+  quickInput.addEventListener('keydown', handleQuickInputKeydown);
+  quickInput.addEventListener('input', handleQuickInputResize);
+}
+if (quickSubmitBtn) {
+  quickSubmitBtn.addEventListener('click', handleQuickSubmit);
 }
 
 // 初始化
@@ -91,6 +121,7 @@ init();
 
 async function init() {
   await loadTasks();
+  await initConsoleState(); // 加载并应用控制台显示状态
 
   // 检测连接状态
   checkConnectionStatus();
@@ -448,11 +479,45 @@ async function handleManualPageStatusCheck() {
  * 加载任务列表
  */
 async function loadTasks() {
-  const tasks = await TaskStorage.getAllTasks();
+  allTasks = await TaskStorage.getAllTasks();
+  renderFilteredTasks();
+}
 
-  if (tasks.length === 0) {
-    taskList.innerHTML = '';
-    taskList.appendChild(emptyState);
+/**
+ * 根据搜索条件渲染任务列表
+ */
+function renderFilteredTasks() {
+  const query = currentSearchQuery.toLowerCase().trim();
+  let filteredTasks = allTasks;
+
+  if (query) {
+    filteredTasks = allTasks.filter(task => {
+      // 搜索任务内容
+      if (task.prompt.toLowerCase().includes(query)) return true;
+      // 搜索步骤内容
+      if (task.steps) {
+        for (const step of task.steps) {
+          if (step.content.toLowerCase().includes(query)) return true;
+        }
+      }
+      return false;
+    });
+  }
+
+  if (filteredTasks.length === 0) {
+    if (query) {
+      // 搜索无结果
+      taskList.innerHTML = `
+        <div class="no-results-state">
+          <i class="ri-search-line no-results-icon"></i>
+          <p>没有找到包含 "${escapeHtml(query)}" 的任务</p>
+        </div>
+      `;
+    } else {
+      // 没有任务
+      taskList.innerHTML = '';
+      taskList.appendChild(emptyState);
+    }
     return;
   }
 
@@ -462,10 +527,48 @@ async function loadTasks() {
   }
 
   // 渲染任务列表
-  taskList.innerHTML = tasks.map(task => renderTaskItem(task)).join('');
+  taskList.innerHTML = filteredTasks.map(task => renderTaskItem(task)).join('');
 
   // 绑定任务操作事件
   bindTaskActions();
+}
+
+/**
+ * 处理搜索输入
+ */
+function handleSearchInput() {
+  const query = searchInput.value;
+  currentSearchQuery = query;
+
+  // 显示/隐藏清除按钮
+  if (clearSearchBtn) {
+    clearSearchBtn.style.display = query ? 'flex' : 'none';
+  }
+
+  // 实时过滤
+  renderFilteredTasks();
+}
+
+/**
+ * 清除搜索
+ */
+function handleClearSearch() {
+  searchInput.value = '';
+  currentSearchQuery = '';
+  if (clearSearchBtn) {
+    clearSearchBtn.style.display = 'none';
+  }
+  renderFilteredTasks();
+  searchInput.focus();
+}
+
+/**
+ * 转义 HTML 特殊字符
+ */
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 /**
@@ -513,7 +616,13 @@ function renderTaskItem(task: Task): string {
           <button class="delete-task" title="删除"><i class="ri-delete-bin-line"></i></button>
         </div>
       </div>
-      <div class="task-content">${task.prompt}</div>
+      
+      <!-- Prompt Text (Truncated via CSS) -->
+      <div class="task-content" title="${task.prompt}">${task.prompt}</div>
+
+      <!-- Steps Preview -->
+      ${renderTaskStepsPreview(task)}
+
       <div class="task-meta">
         <span>${taskTypeText[task.taskType]}</span>
         <span>${createdDate}</span>
@@ -521,6 +630,60 @@ function renderTaskItem(task: Task): string {
         ${task.retryCount > 0 ? `<span>重试: ${task.retryCount}/${task.maxRetries}</span>` : ''}
       </div>
       ${task.error ? `<div style="color: #d32f2f; font-size: 12px; margin-top: 8px;">错误: ${task.error}</div>` : ''}
+    </div>
+  `;
+}
+
+function renderTaskStepsPreview(task: Task): string {
+  if (!task.steps || task.steps.length === 0) {
+    return '';
+  }
+
+  const maxStepsToShow = 3;
+  const stepsToShow = task.steps.slice(0, maxStepsToShow);
+  const remainingSteps = task.steps.length - maxStepsToShow;
+
+  const itemsHtml = stepsToShow.map(step => {
+    // Determine icon and style based on step status
+    // Note: step.status might update as we fix the backend logic, 
+    // but for now we fallback to simple logic if step.status isn't fully reliable or 
+    // if we want to infer from task.currentStepIndex
+
+    let icon = '<i class="ri-checkbox-blank-circle-line"></i>';
+    let activeClass = '';
+
+    // Check if this step is the current one
+    const isCurrent = task.currentStepIndex === step.index;
+    const isPast = (task.currentStepIndex || 0) > step.index;
+
+    if (task.status === TaskStatus.COMPLETED) {
+      icon = '<i class="ri-checkbox-circle-fill" style="color: var(--accent-teal)"></i>';
+    } else if (task.status === TaskStatus.FAILED && isCurrent) {
+      icon = '<i class="ri-close-circle-fill" style="color: var(--accent-pink)"></i>';
+    } else if (isPast) {
+      icon = '<i class="ri-checkbox-circle-fill" style="color: var(--accent-teal)"></i>';
+    } else if (isCurrent && task.status === TaskStatus.RUNNING) {
+      icon = '<i class="ri-loader-4-line" style="animation: spin 1s linear infinite; color: var(--primary)"></i>';
+      activeClass = 'active';
+    }
+
+    return `
+      <div class="step-preview-item ${activeClass}">
+        <div class="step-icon">${icon}</div>
+        <div class="step-preview-content">${step.index + 1}. ${step.content}</div>
+      </div>
+    `;
+  }).join('');
+
+  let moreHtml = '';
+  if (remainingSteps > 0) {
+    moreHtml = `<div class="steps-more">... 还有 ${remainingSteps} 个步骤</div>`;
+  }
+
+  return `
+    <div class="task-steps-preview">
+      ${itemsHtml}
+      ${moreHtml}
     </div>
   `;
 }
@@ -720,6 +883,88 @@ async function handleSubmitTask() {
 }
 
 /**
+ * 快捷录入 - 键盘事件处理
+ * Enter: 提交
+ * Shift+Enter: 换行
+ */
+function handleQuickInputKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleQuickSubmit();
+  }
+}
+
+/**
+ * 快捷录入 - 自动调整高度
+ */
+function handleQuickInputResize() {
+  // Reset height to auto to get the correct scrollHeight
+  quickInput.style.height = 'auto';
+  // Set to scrollHeight but cap at max-height (handled by CSS)
+  quickInput.style.height = Math.min(quickInput.scrollHeight, 120) + 'px';
+}
+
+/**
+ * 快捷录入 - 提交任务
+ */
+async function handleQuickSubmit() {
+  const prompt = quickInput.value.trim();
+
+  if (!prompt) {
+    return;
+  }
+
+  // 解析多步骤任务
+  const STEP_SEPARATOR = '--------';
+  const hasSteps = prompt.includes(STEP_SEPARATOR);
+
+  let steps: TaskStep[] | undefined = undefined;
+  let currentStepIndex: number | undefined = undefined;
+
+  if (hasSteps) {
+    const stepContents = prompt
+      .split(STEP_SEPARATOR)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    if (stepContents.length > 1) {
+      steps = stepContents.map((content, index) => ({
+        index,
+        content,
+        status: TaskStatus.PENDING
+      }));
+      currentStepIndex = 0;
+
+      addDebugLog('info', `Quick add: Multi-step task, ${steps.length} steps`);
+    }
+  }
+
+  // 创建新任务 (默认类型为 text，重试次数为 0)
+  const newTask: Task = {
+    id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    taskType: TaskType.TEXT,
+    prompt,
+    status: TaskStatus.PENDING,
+    createdAt: Date.now(),
+    retryCount: 0,
+    maxRetries: 0,
+    steps,
+    currentStepIndex
+  };
+
+  await TaskStorage.addTask(newTask);
+  addDebugLog('success', 'Quick add: Task created');
+
+  // 通知 background 有新任务
+  chrome.runtime.sendMessage({ type: 'NEW_TASK_ADDED' });
+
+  // 清空输入框并保持聚焦
+  quickInput.value = '';
+  quickInput.style.height = 'auto';
+  quickInput.focus();
+}
+
+/**
  * 开始执行任务
  */
 async function startTask(taskId: string) {
@@ -841,4 +1086,27 @@ function addDebugLog(level: 'info' | 'success' | 'warning' | 'error', message: s
   if (items.length > 100) {
     items[0].remove();
   }
+}
+
+/**
+ * 切换控制台显示状态
+ */
+async function toggleConsole() {
+  const isHidden = logPanel.classList.toggle('hidden');
+  toggleConsoleBtn.classList.toggle('active', !isHidden);
+
+  // 保存状态
+  await chrome.storage.local.set({ consoleVisible: !isHidden });
+}
+
+/**
+ * 初始化控制台显示状态
+ */
+async function initConsoleState() {
+  const result = await chrome.storage.local.get('consoleVisible');
+  // 默认显示 (undefined 或 true)
+  const isVisible = result.consoleVisible !== false;
+
+  logPanel.classList.toggle('hidden', !isVisible);
+  toggleConsoleBtn.classList.toggle('active', isVisible);
 }

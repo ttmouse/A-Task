@@ -1,3 +1,7 @@
+// [IN]: chrome.runtime events, TaskStorage, User Actions
+// [OUT]: Task Orchestration, Content Script Messaging, State Management
+// [POS]: Service Worker / Central Controller
+// Protocol: When updated, sync this header + src/.folder.md
 // AIDEV-NOTE: Service Worker 是任务调度的核心
 // 负责：1. 任务队列管理 2. 任务调度 3. 与 content scripts 通信 4. 状态同步
 
@@ -81,10 +85,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
- * 处理新任务添加
+ * 处理新任务添加 - 自动开始执行
  */
 async function handleNewTaskAdded() {
   console.log('[Background] 新任务已添加');
+  // 尝试自动开始执行（如果当前没有任务在运行）
+  await startNextPendingTask();
 }
 
 /**
@@ -344,6 +350,29 @@ async function handleTaskStatusUpdate(taskId: string, status: TaskStatus) {
     }
     // 主动通知 UI 刷新
     chrome.runtime.sendMessage({ type: 'RELOAD_TASKS' });
+
+    // AIDEV-NOTE: 自动开始队列中的下一个任务
+    await startNextPendingTask();
+  }
+}
+
+/**
+ * 检查并开始下一个待处理的任务
+ */
+async function startNextPendingTask() {
+  if (currentTask !== null) {
+    console.log('[Background] 当前有任务在执行，不启动新任务');
+    return;
+  }
+
+  const tasks = await TaskStorage.getAllTasks();
+  const pendingTask = tasks.find(t => t.status === TaskStatus.PENDING);
+
+  if (pendingTask) {
+    console.log('[Background] 自动开始下一个待处理任务:', pendingTask.id);
+    await executeTask(pendingTask);
+  } else {
+    console.log('[Background] 队列中没有更多待处理的任务');
   }
 }
 

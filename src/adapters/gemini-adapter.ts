@@ -1,7 +1,7 @@
-// INPUT: ./base-adapter.js (BaseAdapter 基类), ../types/task.js (TaskStatus)
-// OUTPUT: GeminiAdapter 类，实现 Gemini 网站的任务提交、状态检查、结果获取
-// POS: 具体适配器实现，被 AdapterFactory 创建，在 Gemini 页面的 content script 中使用
-// 一旦本文件被修改，请更新此注释并同步更新 /src/adapters/README.md
+// [IN]: DOM (Gemini), BaseAdapter
+// [OUT]: DOM Manipulation (Input/Submit), Status Monitoring
+// [POS]: Adapters Layer / Concrete Implementation (Gemini)
+// Protocol: When updated, sync this header + src/adapters/.folder.md
 
 import { BaseAdapter } from './base-adapter.js';
 import { TaskStatus } from '../types/task.js';
@@ -41,7 +41,7 @@ export class GeminiAdapter extends BaseAdapter {
       const isIdle = await this.waitForPageIdle();
       if (!isIdle) {
         this.sendDebugLog('error', '❌ 页面一直处于生成状态，暂时无法提交新任务');
-         this.notifyInputStatus('blocked', '页面仍在生成，暂无法输入');
+        this.notifyInputStatus('blocked', '页面仍在生成，暂无法输入');
         return false;
       }
 
@@ -122,6 +122,7 @@ export class GeminiAdapter extends BaseAdapter {
   private hasSeenBusyState = false;
   private currentInputState: InputState = 'unknown';
   private lastInputDetail?: string;
+  private _lastSilentLog = 0;
 
   /**
    * 发送调试日志
@@ -150,174 +151,126 @@ export class GeminiAdapter extends BaseAdapter {
     });
   }
 
+  // AIDEV-NOTE: Flag set by MutationObserver when it detects stability
+  private observerConfirmedIdle = false;
+
   /**
    * 检查任务状态
    * AIDEV-NOTE: 使用停止按钮状态 + 按钮容器状态 + 文本稳定性作为主要检测方法
-   *
-   * 关键改进：
-   * 1. 增加按钮容器状态检测（disabled/visible class）
-   * 2. 增加稳定性检查次数（3→5次），更保守
-   * 3. 多重确认机制，避免过早判定
    */
   async checkStatus(): Promise<TaskStatus> {
     try {
+      // 0. Base check: MutationObserver confirmed idle
+      if (this.observerConfirmedIdle) {
+        this.sendDebugLog('success', '🎉 DOM 监听确认页面已稳定且空闲');
+        this.stopMonitoring();
+        this.notifyInputStatus('idle', '任务完成，页面空闲');
+        return TaskStatus.COMPLETED;
+      }
+
       // AIDEV-NOTE: 第一层检测 - 检查停止按钮（最可靠的指标）
-      // 生成中：按钮有 'stop' class，显示"停止回答"
-      // 完成后：按钮切换回发送状态，没有 'stop' class
+      // ... (rest of checkStatus logic remains similar, but we can rely on observerConfirmedIdle for speed)
+
+      // ... existing checks ...
 
       const stopButton = document.querySelector(GeminiAdapter.SELECTORS.stopButton) as HTMLButtonElement | null;
       const submitButton = document.querySelector(GeminiAdapter.SELECTORS.submitButton) as HTMLButtonElement | null;
       const isStopVisible = (btn: HTMLElement | null) =>
         btn && this.isElementVisible(btn) &&
         ((btn.classList.contains('stop')) ||
-         (btn.getAttribute('aria-label') || '').includes('停止') ||
-         (btn.getAttribute('aria-label') || '').toLowerCase().includes('stop'));
+          (btn.getAttribute('aria-label') || '').includes('停止') ||
+          (btn.getAttribute('aria-label') || '').toLowerCase().includes('stop'));
 
       if (isStopVisible(stopButton) || isStopVisible(submitButton)) {
         const label = (stopButton || submitButton)?.getAttribute('aria-label');
         this.sendDebugLog('info', `⏳ 检测到停止按钮 (${label || '停止回答'})，AI 正在生成...`);
-        this.hasSeenBusyState = true; // 记录已经进入过生成状态
-        this.stableCheckCount = 0; // 重置文本稳定计数器
-        this.buttonStableCount = 0; // 重置按钮稳定计数器
-        return TaskStatus.RUNNING;
-      }
-
-      // AIDEV-NOTE: 停止按钮已经消失，进一步确认页面是否空闲
-
-      const busyState = this.detectPageBusyState(false);
-      if (busyState.busy) {
         this.hasSeenBusyState = true;
-        this.sendDebugLog('info', busyState.detail || '⏳ 检测到页面仍在生成，继续等待...');
+        this.stableCheckCount = 0;
         this.buttonStableCount = 0;
+        this.observerConfirmedIdle = false; // Reset flag if we see busy state
         return TaskStatus.RUNNING;
       }
 
+      // AIDEV-NOTE: 简化逻辑 - 没有停止按钮 = 生成完毕
+      // 如果之前进入过生成状态，现在停止按钮消失了，就是完成
       if (this.hasSeenBusyState) {
         this.sendDebugLog('success', '🎉 停止按钮消失，页面已返回待输入状态');
-        this.hasSeenBusyState = false;
         this.stopMonitoring();
         this.notifyInputStatus('idle', '任务完成，页面空闲');
         return TaskStatus.COMPLETED;
       }
 
-      // 仍未检测到停止按钮（或页面从未进入过忙碌状态），退回到文本稳定性检测
-
-      if (!submitButton) {
-        this.sendDebugLog('warning', '⚠️ 找不到发送按钮，尝试通过响应文本判断状态...');
-      }
-
-      const submitButtonContainer = document.querySelector(GeminiAdapter.SELECTORS.submitButtonContainer);
-      if (!submitButtonContainer) {
-        this.sendDebugLog('warning', '⚠️ 找不到发送按钮容器，尝试通过响应文本判断状态...');
-      }
-
-      // AIDEV-NOTE: 第三层检测 - 检查响应文本的稳定性
-
-      const latestResponse = document.querySelector(GeminiAdapter.SELECTORS.latestResponse);
-      if (!latestResponse) {
-        this.sendDebugLog('warning', '⚠️ 找不到响应内容，继续等待...');
-        this.buttonStableCount = 0;
-        return TaskStatus.RUNNING;
-      }
-
-      const currentLength = latestResponse.textContent?.trim().length || 0;
-
-      // 文本长度是否稳定（连续多次没有变化）
-      if (currentLength === this.lastResponseLength && currentLength > 0) {
-        this.stableCheckCount++;
-        this.sendDebugLog('info', `⏳ 响应文本稳定: ${this.stableCheckCount}/5 次 (长度: ${currentLength})`);
-      } else {
-        if (this.lastResponseLength > 0 && currentLength > this.lastResponseLength) {
-          this.sendDebugLog('info', `⏳ 响应文本仍在增长: ${this.lastResponseLength} → ${currentLength}`);
-        }
-        this.stableCheckCount = 0;
-        this.buttonStableCount = 0; // 文本还在变化，重置按钮计数
-      }
-
-      this.lastResponseLength = currentLength;
-
-      // AIDEV-NOTE: 第四层检测 - 按钮状态也需要连续稳定多次（提高到5次，更保守）
-      if (this.stableCheckCount >= 5) {
-        if (!submitButton || !submitButtonContainer) {
-          this.sendDebugLog('success', '🎉 响应文本已稳定且停止按钮消失，即使当前只显示麦克风也判定完成');
-          this.stopMonitoring();
-          this.notifyInputStatus('idle', '任务完成，页面空闲');
-          return TaskStatus.COMPLETED;
-        }
-
-        this.buttonStableCount++;
-        this.sendDebugLog('info', `✅ 按钮稳定检测: ${this.buttonStableCount}/5 次`);
-
-        // AIDEV-NOTE: 同时满足所有条件才判定完成：
-        // - 文本连续 5 次稳定（10秒，从6秒增加到10秒）
-        // - 按钮区域连续 5 次稳定（如果存在发送按钮）
-        // - 停止按钮已消失（最关键的检查）
-        if (this.buttonStableCount >= 5) {
-          // 最后多重确认
-          const finalStopButtonCheck = document.querySelector(GeminiAdapter.SELECTORS.stopButton) as HTMLElement | null;
-          const stopStillVisible = finalStopButtonCheck && this.isElementVisible(finalStopButtonCheck);
-          if (stopStillVisible) {
-            this.sendDebugLog('warning', '⚠️ 最后检查发现停止按钮还在，重置计数器');
-            this.buttonStableCount = 0;
-            this.stableCheckCount = 0;
-            return TaskStatus.RUNNING;
-          }
-
-          // Gemini 在单文本任务完成后会清空输入框，并将发送按钮禁用，此时即便按钮是 disabled 也表示可以再次输入
-          const isSubmitDisabled = submitButton.disabled || submitButton.getAttribute('aria-disabled') === 'true';
-          if (isSubmitDisabled) {
-            this.sendDebugLog('success', '🎉 生成完成确认！发送按钮已恢复为空闲（禁用状态意味着输入框为空），停止按钮消失');
-          } else {
-            const ariaLabel = submitButton.getAttribute('aria-label');
-            this.sendDebugLog('success', `🎉 生成完成确认！发送按钮 (${ariaLabel}) 已稳定可用，文本已停止增长，停止按钮已消失`);
-          }
-          this.stopMonitoring();
-          this.notifyInputStatus('idle', '任务完成，页面空闲');
-          return TaskStatus.COMPLETED;
-        }
-      }
-
-      // 备用检测：检查加载指示器
-      const loadingIndicator = document.querySelector(GeminiAdapter.SELECTORS.loadingIndicator);
-      if (loadingIndicator) {
-        const display = window.getComputedStyle(loadingIndicator).display;
-        if (display !== 'none') {
-          this.sendDebugLog('info', '⏳ 检测到加载指示器...');
-          this.buttonStableCount = 0;
-          return TaskStatus.RUNNING;
-        }
-      }
-
-      // 检查错误信息
-      const errorElement = document.querySelector('[role="alert"], .error-message');
-      if (errorElement) {
-        const errorText = errorElement.textContent?.trim() || '未知错误';
-        this.sendDebugLog('error', `❌ 检测到错误: ${errorText}`);
-        this.stopMonitoring();
-        return TaskStatus.FAILED;
-      }
-
+      // 还没进入过生成状态，可能刚提交还没开始
+      this.sendDebugLog('info', '⏳ 等待 AI 开始生成...');
       return TaskStatus.RUNNING;
 
     } catch (error) {
       console.error('[Gemini Adapter] 检查状态失败:', error);
-      const errorMsg = error instanceof Error ? error.message : '未知错误';
-      this.sendDebugLog('error', `❌ 检查状态异常: ${errorMsg}`);
       return TaskStatus.FAILED;
+    }
+  }
+
+  // ... startMonitoring ...
+
+  /**
+   * DOM 稳定后检查是否完成
+   */
+  private async checkCompletionAfterStable(): Promise<void> {
+    const timeSinceLastMutation = Date.now() - this.lastMutationTime;
+
+    // 如果距离最后一次变化已经超过 3 秒，认为可能已完成
+    if (timeSinceLastMutation >= 3000) {
+      // Check stop button first - MUST use isElementVisible
+      const stopButton = document.querySelector(GeminiAdapter.SELECTORS.stopButton) as HTMLElement;
+      if (stopButton && this.isElementVisible(stopButton)) {
+        // Double check it's actually a stop button (logic copied from checkStatus)
+        const isRealStop = stopButton.classList.contains('stop') ||
+          (stopButton.getAttribute('aria-label') || '').includes('停止') ||
+          (stopButton.getAttribute('aria-label') || '').toLowerCase().includes('stop');
+
+        if (isRealStop) {
+          this.sendDebugLog('warning', '⚠️ 停止按钮还存在 (可见)，AI 仍在生成中，不能判定完成');
+          return; // Still running
+        }
+      }
+
+      // Check submit button - In Gemini, if it exists and is NOT a stop button, we're done
+      // The button being disabled (input empty) is FINE - that's the normal idle state after generation!
+      const submitButton = document.querySelector(GeminiAdapter.SELECTORS.submitButton) as HTMLButtonElement;
+      if (!submitButton) return; // No button at all, can't determine state
+
+      // If button has 'stop' class, it's still generating (this shouldn't happen if stopButton wasn't found above)
+      if (submitButton.classList.contains('stop')) {
+        this.sendDebugLog('warning', '⚠️ 发送按钮有 stop 类，AI 仍在生成');
+        return;
+      }
+
+      // Loading indicator
+      const loadingIndicator = document.querySelector(GeminiAdapter.SELECTORS.loadingIndicator);
+      if (loadingIndicator && window.getComputedStyle(loadingIndicator).display !== 'none') {
+        return;
+      }
+
+      // All good - Set flag (button exists, no stop class, no loading indicator)
+      this.sendDebugLog('success', '🎉 (Observer) 停止按钮消失，页面已返回待输入状态');
+      this.observerConfirmedIdle = true;
+
+      // DO NOT call stopMonitoring() here, let checkStatus do it
+      // DO NOT send message to background
     }
   }
 
   /**
    * 开始监控回复完成
-   * AIDEV-NOTE: 使用 MutationObserver 实时监听 DOM 变化
    */
   private startMonitoring(): void {
     console.log('[Gemini Adapter] 开始监控回复完成 (MutationObserver)');
     this.lastResponseLength = 0;
     this.stableCheckCount = 0;
-    this.buttonStableCount = 0;  // 重置按钮稳定计数器
+    this.buttonStableCount = 0;
     this.lastMutationTime = Date.now();
     this.hasSeenBusyState = false;
+    this.observerConfirmedIdle = false; // Reset flag
 
     // 查找响应容器
     const messagesContainer = document.querySelector(GeminiAdapter.SELECTORS.messagesContainer);
@@ -352,64 +305,15 @@ export class GeminiAdapter extends BaseAdapter {
       attributeFilter: ['aria-busy', 'class'] // 只监听特定属性
     });
 
-    this.sendDebugLog('success', '✅ 已启动 DOM 变化监听');
-  }
+    this.sendDebugLog('success', '✅ 已启动 DOM 变化监听 (MutationObserver)');
 
-  /**
-   * DOM 稳定后检查是否完成
-   * AIDEV-NOTE: 必须先检查停止按钮，这是最可靠的指标
-   */
-  private async checkCompletionAfterStable(): Promise<void> {
-    const timeSinceLastMutation = Date.now() - this.lastMutationTime;
-
-    // 如果距离最后一次变化已经超过 3 秒，认为可能已完成
-    if (timeSinceLastMutation >= 3000) {
-      this.sendDebugLog('info', '✅ DOM 已稳定 3 秒，检查完成状态...');
-
-      // AIDEV-NOTE: 关键检查 - 停止按钮是否还存在
-      // 如果停止按钮还在，说明 AI 还在生成，绝不能判定完成
-      const stopButton = document.querySelector(GeminiAdapter.SELECTORS.stopButton);
-      if (stopButton) {
-        this.sendDebugLog('warning', '⚠️ 停止按钮还存在，AI 仍在生成中，不能判定完成');
-        return; // 不判定完成，继续等待
+    // Fallback: Trigger a manual check after 5 seconds if no mutations seen
+    setTimeout(() => {
+      if (!this.lastMutationTime || this.lastMutationTime < Date.now() - 4000) {
+        console.log('[Gemini Adapter] Fallback: No mutations detected recently, forcing check.');
+        this.checkCompletionAfterStable();
       }
-
-      // 停止按钮消失了，进一步确认
-      this.sendDebugLog('info', '✅ 停止按钮已消失，进一步确认...');
-
-      // 检查提交按钮状态
-      const submitButton = document.querySelector(GeminiAdapter.SELECTORS.submitButton) as HTMLButtonElement;
-      if (!submitButton) {
-        this.sendDebugLog('warning', '⚠️ 找不到发送按钮，继续等待...');
-        return;
-      }
-
-      const isDisabled = submitButton.disabled || submitButton.getAttribute('aria-disabled') === 'true';
-
-      if (isDisabled) {
-        // 按钮被禁用，说明还没完成
-        this.sendDebugLog('warning', '⚠️ 发送按钮被禁用，继续等待...');
-        return;
-      }
-
-      // 检查是否还有加载指示器
-      const loadingIndicator = document.querySelector(GeminiAdapter.SELECTORS.loadingIndicator);
-      if (loadingIndicator && window.getComputedStyle(loadingIndicator).display !== 'none') {
-        this.sendDebugLog('warning', '⚠️ 加载指示器还在，继续等待...');
-        return;
-      }
-
-      // 所有条件都满足：停止按钮消失、发送按钮可用、无加载指示器
-      this.sendDebugLog('success', '🎉 所有条件确认，生成真正完成！');
-      this.stopMonitoring();
-
-      // 通知 background 任务完成
-      chrome.runtime.sendMessage({
-        type: 'TASK_STATUS_UPDATE',
-        taskId: this.task.id,
-        status: TaskStatus.COMPLETED
-      });
-    }
+    }, 5000);
   }
 
   /**
@@ -448,12 +352,12 @@ export class GeminiAdapter extends BaseAdapter {
       const submitButton = document.querySelector(GeminiAdapter.SELECTORS.submitButton) as HTMLButtonElement | null;
       const stopCandidate = this.isElementVisible(stopButton)
         ? stopButton
-        : (this.isElementVisible(submitButton) &&
-            ((submitButton.classList.contains('stop')) ||
-             (submitButton.getAttribute('aria-label') || '').includes('停止') ||
-             (submitButton.getAttribute('aria-label') || '').toLowerCase().includes('stop')))
-            ? submitButton
-            : null;
+        : (submitButton && this.isElementVisible(submitButton) &&
+          ((submitButton.classList.contains('stop')) ||
+            (submitButton.getAttribute('aria-label') || '').includes('停止') ||
+            (submitButton.getAttribute('aria-label') || '').toLowerCase().includes('stop')))
+          ? submitButton
+          : null;
       if (stopCandidate) {
         const label = stopCandidate.getAttribute('aria-label');
         return {

@@ -1,7 +1,7 @@
-// INPUT: ./base-adapter.js (BaseAdapter 基类), ../types/task.js (TaskStatus)
-// OUTPUT: ChatGPTAdapter 类，实现 ChatGPT 网站的任务提交、状态检查、结果获取
-// POS: 具体适配器实现，被 AdapterFactory 创建，在 ChatGPT 页面的 content script 中使用
-// 一旦本文件被修改，请更新此注释并同步更新 /src/adapters/README.md
+// [IN]: DOM (ChatGPT), BaseAdapter
+// [OUT]: DOM Manipulation (Input/Submit), Status Monitoring
+// [POS]: Adapters Layer / Concrete Implementation (ChatGPT)
+// Protocol: When updated, sync this header + src/adapters/.folder.md
 
 import { BaseAdapter } from './base-adapter.js';
 import { TaskStatus } from '../types/task.js';
@@ -18,10 +18,10 @@ export class ChatGPTAdapter extends BaseAdapter {
     submitButton: '#composer-submit-button, button[data-testid="send-button"], button[aria-label="发送提示"], button[aria-label="Send prompt"]',
     // 停止生成按钮
     stopButton: 'button[data-testid="stop-button"], button[aria-label="停止流式传输"], button[aria-label*="Stop"]',
-    // 消息容器
-    messagesContainer: '[data-testid="conversation-turn"], .conversation-content',
+    // 消息容器 - ChatGPT 现在通常使用 article 标签或及其父级
+    messagesContainer: 'div.flex.flex-col.items-center, div[role="presentation"], [data-testid="conversation-turn"], main',
     // 最新响应
-    latestResponse: '[data-testid="conversation-turn"]:last-child [data-message-author-role="assistant"]',
+    latestResponse: '[data-testid="conversation-turn"]:last-child [data-message-author-role="assistant"], article:last-child [data-message-author-role="assistant"], .markdown.prose:last-of-type',
     // 加载指示器
     loadingIndicator: '.result-streaming, [data-testid="streaming-loader"]'
   };
@@ -210,9 +210,28 @@ export class ChatGPTAdapter extends BaseAdapter {
     this.stableCheckCount = 0;
     this.lastMutationTime = Date.now();
 
-    const messagesContainer = document.querySelector(ChatGPTAdapter.SELECTORS.messagesContainer);
+    let messagesContainer = document.querySelector(ChatGPTAdapter.SELECTORS.messagesContainer);
+
+    // 如果找不到指定的容器，尝试寻找一个具体的对话 turn 并使用其父级
     if (!messagesContainer) {
-      this.sendDebugLog('warning', '⚠️ 找不到消息容器');
+      const anyTurn = document.querySelector('[data-testid="conversation-turn"], article');
+      if (anyTurn && anyTurn.parentElement) {
+        messagesContainer = anyTurn.parentElement;
+        this.sendDebugLog('info', '🧩 采用自动探测的消息容器');
+      }
+    }
+
+    if (!messagesContainer) {
+      // 仍然找不到，兜底使用 main
+      const main = document.querySelector('main');
+      if (main) {
+        messagesContainer = main;
+        this.sendDebugLog('info', '🧩 采用 main 作为消息容器兜底');
+      }
+    }
+
+    if (!messagesContainer) {
+      this.sendDebugLog('warning', '⚠️ 找不到消息容器，将完全依赖轮询判断状态');
       return;
     }
 

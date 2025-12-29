@@ -1,7 +1,7 @@
-// INPUT: ../types/task.js (Task, TaskStatus, TaskStep 类型定义)
-// OUTPUT: BaseAdapter 抽象类，定义适配器接口（submitContent, checkStatus, getResult, cleanup 等方法）
-// POS: 适配器层基类，被所有具体适配器继承（chatgpt-adapter, gemini-adapter 等）
-// 一旦本文件被修改，请更新此注释并同步更新 /src/adapters/README.md
+// [IN]: Task Object (Types)
+// [OUT]: Adapter Interface Contract (submit, checkStatus, cleanup)
+// [POS]: Adapters Layer / Abstract Base Class
+// Protocol: When updated, sync this header + src/adapters/.folder.md
 
 import { Task, TaskStatus, TaskStep } from '../types/task.js';
 

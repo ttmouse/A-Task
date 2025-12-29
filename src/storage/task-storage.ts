@@ -1,7 +1,7 @@
-// INPUT: ../types/task.js (Task, TaskStatus), chrome.storage.local API
-// OUTPUT: TaskStorage 类，提供任务存储的静态方法（getAllTasks, saveTasks, addTask, updateTask 等）
-// POS: 存储层，封装 chrome.storage.local API，被 TaskExecutor、background.ts 等模块调用
-// 一旦本文件被修改，请更新此注释并同步更新 /src/storage/README.md
+// [IN]: chrome.storage.local
+// [OUT]: Typed Data (Task[])
+// [POS]: Storage Layer / Persistence Wrapper
+// Protocol: When updated, sync this header + src/storage/.folder.md
 
 import { Task, TaskStatus } from '../types/task.js';
 

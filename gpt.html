@@ -1,9 +1,245 @@
 <!-- gpt 待录入状态 -->
 
-<div class=""><div class="bg-token-bg-primary corner-superellipse/1.1 cursor-text overflow-clip bg-clip-padding p-2.5 contain-inline-size dark:bg-[#303030] grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'leading_primary_trailing'_'._footer_.'] group-data-expanded/composer:[grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] shadow-short" style="border-radius: 28px; transform: none; transform-origin: 50% 50% 0px;"><div class="-my-2.5 flex min-h-14 items-center overflow-x-hidden px-1.5 [grid-area:primary] group-data-expanded/composer:mb-0 group-data-expanded/composer:px-2.5" style="transform: none; transform-origin: 50% 50% 0px;"><div class="wcDTda_prosemirror-parent text-token-text-primary max-h-[max(30svh,5rem)] max-h-52 min-h-[var(--deep-research-composer-extra-height,unset)] flex-1 overflow-auto [scrollbar-width:thin] default-browser vertical-scroll-fade-mask"><textarea class="wcDTda_fallbackTextarea" name="prompt-textarea" placeholder="询问任何问题" data-virtualkeyboard="true" data-auto-resize="true" style="display: none; height: 0px;"></textarea><script nonce="">window.__oai_logHTML?window.__oai_logHTML():window.__oai_SSR_HTML=window.__oai_SSR_HTML||Date.now();requestAnimationFrame((function(){window.__oai_logTTI?window.__oai_logTTI():window.__oai_SSR_TTI=window.__oai_SSR_TTI||Date.now()}))</script><div contenteditable="true" translate="no" class="ProseMirror" id="prompt-textarea" data-virtualkeyboard="true" data-gtm-form-interact-field-id="1"><p data-placeholder="询问任何问题" class="placeholder"><br class="ProseMirror-trailingBreak"></p></div></div></div><div class="[grid-area:leading]" style="transform: none; transform-origin: 50% 50% 0px;"><span class="flex" data-state="closed"><button type="button" class="composer-btn" data-testid="composer-plus-btn" aria-label="添加文件等" id="composer-plus-btn" aria-haspopup="menu" aria-expanded="false" data-state="closed"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" aria-hidden="true" class="icon"><use href="/cdn/assets/sprites-core-i9agxugi.svg#6be74c" fill="currentColor"></use></svg></button></span></div><div class="flex items-center gap-2 [grid-area:trailing]" style="transform: none; transform-origin: 50% 50% 0px;"><div class="ms-auto flex items-center gap-1.5"><span class="" data-state="closed"><button aria-label="听写按钮" type="button" class="composer-btn"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" aria-label="" class="icon" font-size="inherit"><use href="/cdn/assets/sprites-core-i9agxugi.svg#29f921" fill="currentColor"></use></svg></button></span><div><span class="" data-state="closed"><div><div class="relative"><button type="button" aria-label="启动语音模式" class="composer-submit-button-color text-submit-btn-text flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:opacity-70 focus-visible:outline-black focus-visible:outline-none disabled:text-[#f4f4f4] disabled:opacity-30 dark:focus-visible:outline-white" style="view-transition-name: var(--vt-composer-speech-button);"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" aria-hidden="true" class="h-5 w-5"><use href="/cdn/assets/sprites-core-i9agxugi.svg#f8aa74" fill="currentColor"></use></svg></button></div></div></span></div></div></div></div></div>
+<div class="">
+    <div class="bg-token-bg-primary corner-superellipse/1.1 cursor-text overflow-clip bg-clip-padding p-2.5 contain-inline-size dark:bg-[#303030] grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'leading_primary_trailing'_'._footer_.'] group-data-expanded/composer:[grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] shadow-short"
+        style="border-radius: 28px; transform: none; transform-origin: 50% 50% 0px;">
+        <div class="-my-2.5 flex min-h-14 items-center overflow-x-hidden px-1.5 [grid-area:primary] group-data-expanded/composer:mb-0 group-data-expanded/composer:px-2.5"
+            style="transform: none; transform-origin: 50% 50% 0px;">
+            <div
+                class="wcDTda_prosemirror-parent text-token-text-primary max-h-[max(30svh,5rem)] max-h-52 min-h-[var(--deep-research-composer-extra-height,unset)] flex-1 overflow-auto [scrollbar-width:thin] default-browser vertical-scroll-fade-mask">
+                <textarea class="wcDTda_fallbackTextarea" name="prompt-textarea" placeholder="询问任何问题"
+                    data-virtualkeyboard="true" data-auto-resize="true" style="display: none; height: 0px;"></textarea>
+                <script
+                    nonce="">window.__oai_logHTML ? window.__oai_logHTML() : window.__oai_SSR_HTML = window.__oai_SSR_HTML || Date.now(); requestAnimationFrame((function () { window.__oai_logTTI ? window.__oai_logTTI() : window.__oai_SSR_TTI = window.__oai_SSR_TTI || Date.now() }))</script>
+                <div contenteditable="true" translate="no" class="ProseMirror" id="prompt-textarea"
+                    data-virtualkeyboard="true" data-gtm-form-interact-field-id="1">
+                    <p data-placeholder="询问任何问题" class="placeholder"><br class="ProseMirror-trailingBreak"></p>
+                </div>
+            </div>
+        </div>
+        <div class="[grid-area:leading]" style="transform: none; transform-origin: 50% 50% 0px;"><span class="flex"
+                data-state="closed"><button type="button" class="composer-btn" data-testid="composer-plus-btn"
+                    aria-label="添加文件等" id="composer-plus-btn" aria-haspopup="menu" aria-expanded="false"
+                    data-state="closed"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                        aria-hidden="true" class="icon">
+                        <use href="/cdn/assets/sprites-core-i9agxugi.svg#6be74c" fill="currentColor"></use>
+                    </svg></button></span></div>
+        <div class="flex items-center gap-2 [grid-area:trailing]"
+            style="transform: none; transform-origin: 50% 50% 0px;">
+            <div class="ms-auto flex items-center gap-1.5"><span class="" data-state="closed"><button aria-label="听写按钮"
+                        type="button" class="composer-btn"><svg xmlns="http://www.w3.org/2000/svg" width="20"
+                            height="20" aria-label="" class="icon" font-size="inherit">
+                            <use href="/cdn/assets/sprites-core-i9agxugi.svg#29f921" fill="currentColor"></use>
+                        </svg></button></span>
+                <div><span class="" data-state="closed">
+                        <div>
+                            <div class="relative"><button type="button" aria-label="启动语音模式"
+                                    class="composer-submit-button-color text-submit-btn-text flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:opacity-70 focus-visible:outline-black focus-visible:outline-none disabled:text-[#f4f4f4] disabled:opacity-30 dark:focus-visible:outline-white"
+                                    style="view-transition-name: var(--vt-composer-speech-button);"><svg
+                                        xmlns="http://www.w3.org/2000/svg" width="20" height="20" aria-hidden="true"
+                                        class="h-5 w-5">
+                                        <use href="/cdn/assets/sprites-core-i9agxugi.svg#f8aa74" fill="currentColor">
+                                        </use>
+                                    </svg></button></div>
+                        </div>
+                    </span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- gemini 等待输入 -->
+<div _ngcontent-ng-c1238140861="" xapfileselectordropzone=""
+    class="text-input-field ng-tns-c1238140861-5 with-toolbox-drawer height-expanded-past-single-line">
+    <!----><!----><!----><!---->
+    <div _ngcontent-ng-c1238140861="" class="ng-tns-c1238140861-5 text-input-field_textarea-wrapper ng-star-inserted"
+        style="--chat-container-height: 1070;">
+        <div _ngcontent-ng-c1238140861="" class="text-input-field-main-area ng-tns-c1238140861-5">
+            <div _ngcontent-ng-c1238140861="" class="text-input-field_textarea-inner ng-tns-c1238140861-5"
+                style="height: 24px;"><!----><!----><!----><rich-textarea _ngcontent-ng-c1238140861=""
+                    class="text-input-field_textarea ql-container ql-bubble ng-tns-c1238140861-5 ng-untouched ng-valid ng-star-inserted ng-pristine"
+                    _nghost-ng-c791114437="" enterkeyhint="enter" dir="ltr"
+                    style="--textarea-max-rows: 7; --chat-container-height: 1070px;">
+                    <div class="ql-editor textarea new-input-ui ql-blank" data-gramm="false" contenteditable="true"
+                        role="textbox" aria-multiline="true" aria-label="在此处输入提示" data-placeholder="描述你的图片">
+                        <p><br></p>
+                    </div>
+                    <div class="ql-clipboard" contenteditable="true" tabindex="-1"></div>
+                </rich-textarea><!----><!----></div>
+        </div>
+    </div><!---->
+    <div _ngcontent-ng-c1238140861=""
+        class="leading-actions-wrapper ui-ready-fade-in ng-tns-c1238140861-5 has-model-picker ng-star-inserted">
+        <!----><!---->
+        <div _ngcontent-ng-c1238140861="" class="uploader-button-container ng-tns-c1238140861-5 ng-star-inserted"
+            style=""><uploader-signed-out-tooltip _ngcontent-ng-c1238140861="" class="ng-tns-c1238140861-5"
+                _nghost-ng-c4102471502=""><!----></uploader-signed-out-tooltip>
+            <uploader _ngcontent-ng-c1238140861="" maticonprefix="" class="upload-button ng-tns-c1238140861-5"
+                _nghost-ng-c276886432=""><!----><!---->
+                <div _ngcontent-ng-c276886432="" cdk-overlay-origin="" class="file-uploader ng-star-inserted">
+                    <div _ngcontent-ng-c276886432="" class="mat-mdc-tooltip-trigger mat-mdc-tooltip-disabled">
+                        <!----><button _ngcontent-ng-c276886432="" mat-icon-button="" color="primary"
+                            aria-label="打开文件上传菜单"
+                            class="mdc-icon-button mat-mdc-icon-button mat-mdc-button-base mat-mdc-tooltip-trigger upload-card-button open mat-primary ng-star-inserted"
+                            mat-ripple-loader-uninitialized="" mat-ripple-loader-class-name="mat-mdc-button-ripple"
+                            mat-ripple-loader-centered="" jslog="188890;track:generic_click,impression,hover"
+                            aria-describedby="cdk-describedby-message-ng-1-47" cdk-describedby-host="ng-1"
+                            data-hveid="0" decode-data-ved="1"
+                            data-ved="0CAAQ2sMLahcKEwirlO-2ueCRAxUAAAAAHQAAAAAQRw"><span
+                                class="mat-mdc-button-persistent-ripple mdc-icon-button__ripple"></span><mat-icon
+                                _ngcontent-ng-c276886432="" role="img"
+                                class="mat-icon notranslate gds-icon-l google-symbols mat-ligature-font mat-icon-no-color"
+                                aria-hidden="true" data-mat-icon-type="font" data-mat-icon-name="add_2"
+                                fonticon="add_2"></mat-icon><span class="mat-focus-indicator"></span><span
+                                class="mat-mdc-button-touch-target"></span></button><!----><!----><!---->
+                    </div>
+                    <!----><!---->
+                </div>
+                <!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><button
+                    _ngcontent-ng-c276886432="" tabindex="-1" xapfileselectortrigger="" aria-hidden="true"
+                    data-test-id="hidden-local-image-upload-button" class="hidden-local-upload-button"></button><button
+                    _ngcontent-ng-c276886432="" tabindex="-2" xapfileselectortrigger="" aria-hidden="true"
+                    data-test-id="hidden-local-file-upload-button" class="hidden-local-file-upload-button"></button>
+            </uploader>
+        </div><!----><!----><!----><!----><!----><toolbox-drawer _ngcontent-ng-c1238140861="" _nghost-ng-c1266481429=""
+            class="ng-tns-c1266481429-10 ng-tns-c1238140861-5 ng-star-inserted" style="">
+            <div _ngcontent-ng-c1266481429=""
+                class="toolbox-drawer-container ng-tns-c1266481429-10 ng-trigger ng-trigger-toolboxDrawerEnter"
+                jslog="251251;track:impression"><!----><!----><!---->
+                <div _ngcontent-ng-c1266481429="" cdkoverlayorigin=""
+                    class="toolbox-drawer-button-container ng-tns-c1266481429-10 ng-star-inserted" style=""><button
+                        _ngcontent-ng-c1266481429="" mat-icon-button=""
+                        class="mdc-icon-button mat-mdc-icon-button mat-mdc-button-base mat-mdc-tooltip-trigger toolbox-drawer-button toolbox-drawer-button-with-label ng-tns-c1266481429-10 has-selected-item mat-unthemed ng-star-inserted"
+                        mat-ripple-loader-uninitialized="" mat-ripple-loader-class-name="mat-mdc-button-ripple"
+                        mat-ripple-loader-centered="" aria-label="工具"
+                        aria-describedby="cdk-describedby-message-ng-1-101" cdk-describedby-host="ng-1"><span
+                            class="mat-mdc-button-persistent-ripple mdc-icon-button__ripple"></span><mat-icon
+                            _ngcontent-ng-c1266481429="" role="img" fonticon="page_info"
+                            class="mat-icon notranslate gds-icon-l google-symbols mat-ligature-font mat-icon-no-color"
+                            aria-hidden="true" data-mat-icon-type="font" data-mat-icon-name="page_info"></mat-icon><span
+                            class="mat-focus-indicator"></span><span
+                            class="mat-mdc-button-touch-target"></span></button><!----><!----><!----><button
+                        _ngcontent-ng-c1266481429="" mat-button=""
+                        class="mdc-button mat-mdc-button-base toolbox-drawer-item-deselect-button mat-mdc-button ng-tns-c1266481429-10 mat-unthemed ng-star-inserted"
+                        mat-ripple-loader-uninitialized="" mat-ripple-loader-class-name="mat-mdc-button-ripple"
+                        aria-label="取消选择“图片”"><span
+                            class="mat-mdc-button-persistent-ripple mdc-button__ripple"></span><!----><span
+                            class="mdc-button__label"><img _ngcontent-ng-c1266481429="" alt=""
+                                class="menu-icon img-icon gds-icon-l ng-tns-c1266481429-10 ng-star-inserted"
+                                src="https://www.gstatic.com/_/boq-bard-web/_/r/PE85IJPefYo.svg"><!----><span
+                                _ngcontent-ng-c1266481429=""
+                                class="toolbox-drawer-item-deselect-button-label">图片</span></span><mat-icon
+                            _ngcontent-ng-c1266481429="" role="img" fonticon="close" iconpositionend=""
+                            class="mat-icon notranslate gds-icon-l google-symbols mat-ligature-font mat-icon-no-color"
+                            aria-hidden="true" data-mat-icon-type="font" data-mat-icon-name="close"></mat-icon><span
+                            class="mat-focus-indicator"></span><span
+                            class="mat-mdc-button-touch-target"></span></button><!----><!----><!----><!----></div>
+                <!----><!----><!----><!----><!----><!----><!---->
+            </div>
+        </toolbox-drawer><!----><!----><!----><!----><!----><!---->
+    </div><!----><!---->
+    <div _ngcontent-ng-c1238140861="" class="trailing-actions-wrapper ui-ready-fade-in ng-tns-c1238140861-5">
+        <!----><!---->
+        <div _ngcontent-ng-c1238140861="" class="model-picker-container ng-tns-c1238140861-5 ng-star-inserted">
+            <bard-mode-switcher _ngcontent-ng-c1238140861="" class="ng-tns-c1238140861-5" _nghost-ng-c2644247983="">
+                <div _ngcontent-ng-c2644247983="" data-test-id="bard-mode-menu-button"
+                    class="pill-ui-logo-container with-attribution under-input ng-star-inserted"
+                    jslog="206752;track:generic_click;BardVeMetadataKey:[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,[&quot;56fdd199312815e2&quot;]]"
+                    style=""><button _ngcontent-ng-c2644247983="" mat-button=""
+                        class="mdc-button mat-mdc-button-base input-area-switch mat-mdc-button mat-unthemed ng-star-inserted"
+                        mat-ripple-loader-uninitialized="" mat-ripple-loader-class-name="mat-mdc-button-ripple"><span
+                            class="mat-mdc-button-persistent-ripple mdc-button__ripple"></span><span
+                            class="mdc-button__label">
+                            <div _ngcontent-ng-c2644247983="" class="logo-pill-label-container input-area-switch-label">
+                                <span _ngcontent-ng-c2644247983="">快速</span><!----><!----><mat-icon
+                                    _ngcontent-ng-c2644247983="" role="img" fonticon="keyboard_arrow_down"
+                                    class="mat-icon notranslate dropdown-icon gds-icon-l google-symbols mat-ligature-font mat-icon-no-color ng-star-inserted"
+                                    aria-hidden="true" data-mat-icon-type="font"
+                                    data-mat-icon-name="keyboard_arrow_down"></mat-icon><!---->
+                            </div>
+                        </span><span class="mat-focus-indicator"></span><span
+                            class="mat-mdc-button-touch-target"></span></button><!----><!----><!----></div>
+                <!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!---->
+            </bard-mode-switcher>
+        </div><!----><!----><!---->
+        <div _ngcontent-ng-c1238140861="" class="input-buttons-wrapper-bottom ng-tns-c1238140861-5">
+            <div _ngcontent-ng-c1238140861=""
+                class="mic-button-container ng-tns-c1238140861-5 ng-trigger ng-trigger-slide ng-star-inserted">
+                <speech-dictation-mic-button _ngcontent-ng-c1238140861=""
+                    class="speech-dictation-mic-button ng-tns-c1234887106-6 ng-tns-c1238140861-5 ng-star-inserted"
+                    _nghost-ng-c1234887106="" style=""><button _ngcontent-ng-c1234887106=""
+                        data-node-type="speech_dictation_mic_button" maticonsuffix="" mat-icon-button=""
+                        mattooltip="使用麦克风" aria-label="麦克风"
+                        class="mdc-icon-button mat-mdc-icon-button mat-mdc-button-base mat-mdc-tooltip-trigger speech_dictation_mic_button ng-tns-c1234887106-6 mat-unthemed"
+                        mat-ripple-loader-uninitialized="" mat-ripple-loader-class-name="mat-mdc-button-ripple"
+                        mat-ripple-loader-centered="" jslog="175863;track:generic_click,impression"
+                        aria-describedby="cdk-describedby-message-ng-1-4" cdk-describedby-host="ng-1"><span
+                            class="mat-mdc-button-persistent-ripple mdc-icon-button__ripple"></span>
+                        <div _ngcontent-ng-c1234887106=""><mat-icon _ngcontent-ng-c1234887106="" role="img"
+                                class="mat-icon notranslate ng-tns-c1234887106-6 icon-filled gds-icon-l google-symbols mat-ligature-font mat-icon-no-color"
+                                aria-hidden="true" data-mat-icon-type="font" data-mat-icon-name="mic"
+                                fonticon="mic"></mat-icon><!----><!----></div><span
+                            class="mat-focus-indicator"></span><span class="mat-mdc-button-touch-target"></span>
+                    </button><!----></speech-dictation-mic-button><!---->
+            </div><!----><!----><!---->
+            <div _ngcontent-ng-c1238140861=""
+                class="mat-mdc-tooltip-trigger send-button-container ng-tns-c1238140861-5 inner ng-star-inserted disabled mat-mdc-tooltip-disabled is-mobile-device">
+                <button _ngcontent-ng-c1238140861="" mat-icon-button=""
+                    class="mdc-icon-button mat-mdc-icon-button mat-mdc-button-base send-button ng-tns-c1238140861-5 mat-unthemed submit"
+                    mat-ripple-loader-uninitialized="" mat-ripple-loader-class-name="mat-mdc-button-ripple"
+                    mat-ripple-loader-centered="" aria-label="发送"
+                    jslog="173899;track:generic_click,impression;BardVeMetadataKey:[[null,null,null,null,null,null,null,null,1,null,null,null,0]];mutable:true"
+                    aria-disabled="true" tabindex="-1"><span
+                        class="mat-mdc-button-persistent-ripple mdc-icon-button__ripple"></span><mat-icon
+                        _ngcontent-ng-c1238140861="" role="img" fonticon="send"
+                        class="mat-icon notranslate send-button-icon icon-filled gds-icon-xl google-symbols mat-ligature-font mat-icon-no-color"
+                        aria-hidden="true" data-mat-icon-type="font" data-mat-icon-name="send"></mat-icon><!----><span
+                        class="mat-focus-indicator"></span><span class="mat-mdc-button-touch-target"></span></button>
+            </div><!----><!---->
+        </div>
+    </div><!---->
+</div>
+
 
 <!-- gpt 已经输入文字 -->
-<div class=""><div class="bg-token-bg-primary corner-superellipse/1.1 cursor-text overflow-clip bg-clip-padding p-2.5 contain-inline-size dark:bg-[#303030] grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'leading_primary_trailing'_'._footer_.'] group-data-expanded/composer:[grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] shadow-short" style="border-radius: 28px; transform: none; transform-origin: 50% 50% 0px;"><div class="-my-2.5 flex min-h-14 items-center overflow-x-hidden px-1.5 [grid-area:primary] group-data-expanded/composer:mb-0 group-data-expanded/composer:px-2.5" style="transform: none; transform-origin: 50% 50% 0px;"><div class="wcDTda_prosemirror-parent text-token-text-primary max-h-[max(30svh,5rem)] max-h-52 min-h-[var(--deep-research-composer-extra-height,unset)] flex-1 overflow-auto [scrollbar-width:thin] default-browser vertical-scroll-fade-mask"><textarea class="wcDTda_fallbackTextarea" name="prompt-textarea" placeholder="询问任何问题" data-virtualkeyboard="true" data-auto-resize="true" style="display: none; height: 0px;"></textarea><script nonce="">window.__oai_logHTML?window.__oai_logHTML():window.__oai_SSR_HTML=window.__oai_SSR_HTML||Date.now();requestAnimationFrame((function(){window.__oai_logTTI?window.__oai_logTTI():window.__oai_SSR_TTI=window.__oai_SSR_TTI||Date.now()}))</script><div contenteditable="true" translate="no" class="ProseMirror" id="prompt-textarea" data-virtualkeyboard="true" data-gtm-form-interact-field-id="1"><p>12312</p></div></div></div><div class="[grid-area:leading]" style="transform: none; transform-origin: 50% 50% 0px;"><span class="flex" data-state="closed"><button type="button" class="composer-btn" data-testid="composer-plus-btn" aria-label="添加文件等" id="composer-plus-btn" aria-haspopup="menu" aria-expanded="false" data-state="closed"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" aria-hidden="true" class="icon"><use href="/cdn/assets/sprites-core-i9agxugi.svg#6be74c" fill="currentColor"></use></svg></button></span></div><div class="flex items-center gap-2 [grid-area:trailing]" style="transform: none; transform-origin: 50% 50% 0px;"><div class="ms-auto flex items-center gap-1.5"><span class="" data-state="closed"><button aria-label="听写按钮" type="button" class="composer-btn"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" aria-label="" class="icon" font-size="inherit"><use href="/cdn/assets/sprites-core-i9agxugi.svg#29f921" fill="currentColor"></use></svg></button></span><button id="composer-submit-button" aria-label="发送提示" data-testid="send-button" class="composer-submit-btn composer-submit-button-color h-9 w-9"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" aria-hidden="true" class="icon"><use href="/cdn/assets/sprites-core-i9agxugi.svg#01bab7" fill="currentColor"></use></svg></button></div></div></div></div>
+<div class="">
+    <div class="bg-token-bg-primary corner-superellipse/1.1 cursor-text overflow-clip bg-clip-padding p-2.5 contain-inline-size dark:bg-[#303030] grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'leading_primary_trailing'_'._footer_.'] group-data-expanded/composer:[grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] shadow-short"
+        style="border-radius: 28px; transform: none; transform-origin: 50% 50% 0px;">
+        <div class="-my-2.5 flex min-h-14 items-center overflow-x-hidden px-1.5 [grid-area:primary] group-data-expanded/composer:mb-0 group-data-expanded/composer:px-2.5"
+            style="transform: none; transform-origin: 50% 50% 0px;">
+            <div
+                class="wcDTda_prosemirror-parent text-token-text-primary max-h-[max(30svh,5rem)] max-h-52 min-h-[var(--deep-research-composer-extra-height,unset)] flex-1 overflow-auto [scrollbar-width:thin] default-browser vertical-scroll-fade-mask">
+                <textarea class="wcDTda_fallbackTextarea" name="prompt-textarea" placeholder="询问任何问题"
+                    data-virtualkeyboard="true" data-auto-resize="true" style="display: none; height: 0px;"></textarea>
+                <script
+                    nonce="">window.__oai_logHTML ? window.__oai_logHTML() : window.__oai_SSR_HTML = window.__oai_SSR_HTML || Date.now(); requestAnimationFrame((function () { window.__oai_logTTI ? window.__oai_logTTI() : window.__oai_SSR_TTI = window.__oai_SSR_TTI || Date.now() }))</script>
+                <div contenteditable="true" translate="no" class="ProseMirror" id="prompt-textarea"
+                    data-virtualkeyboard="true" data-gtm-form-interact-field-id="1">
+                    <p>12312</p>
+                </div>
+            </div>
+        </div>
+        <div class="[grid-area:leading]" style="transform: none; transform-origin: 50% 50% 0px;"><span class="flex"
+                data-state="closed"><button type="button" class="composer-btn" data-testid="composer-plus-btn"
+                    aria-label="添加文件等" id="composer-plus-btn" aria-haspopup="menu" aria-expanded="false"
+                    data-state="closed"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                        aria-hidden="true" class="icon">
+                        <use href="/cdn/assets/sprites-core-i9agxugi.svg#6be74c" fill="currentColor"></use>
+                    </svg></button></span></div>
+        <div class="flex items-center gap-2 [grid-area:trailing]"
+            style="transform: none; transform-origin: 50% 50% 0px;">
+            <div class="ms-auto flex items-center gap-1.5"><span class="" data-state="closed"><button aria-label="听写按钮"
+                        type="button" class="composer-btn"><svg xmlns="http://www.w3.org/2000/svg" width="20"
+                            height="20" aria-label="" class="icon" font-size="inherit">
+                            <use href="/cdn/assets/sprites-core-i9agxugi.svg#29f921" fill="currentColor"></use>
+                        </svg></button></span><button id="composer-submit-button" aria-label="发送提示"
+                    data-testid="send-button" class="composer-submit-btn composer-submit-button-color h-9 w-9"><svg
+                        xmlns="http://www.w3.org/2000/svg" width="20" height="20" aria-hidden="true" class="icon">
+                        <use href="/cdn/assets/sprites-core-i9agxugi.svg#01bab7" fill="currentColor"></use>
+                    </svg></button></div>
+        </div>
+    </div>
+</div>
 
 <!-- 答案生成状态中 -->
 

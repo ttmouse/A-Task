@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
   <link rel="stylesheet" href="sidepanel.css">
 </head>
+
 <body>
   <div class="app-container">
     <!-- 主布局容器 (无侧边栏) -->
@@ -17,9 +19,9 @@
       <!-- 2. 顶部导航栏 (Top Nav) -->
       <header class="top-nav">
         <div class="nav-left">
-           <h1 id="panelTitle" class="panel-title">A-Task</h1>
+          <h1 id="panelTitle" class="panel-title">A-Task</h1>
         </div>
-        
+
         <!-- 新的操作功能区 -->
         <div class="nav-toolbar">
           <button id="addTaskBtn" class="toolbar-btn primary" title="添加任务">
@@ -34,28 +36,32 @@
             <i class="ri-tools-line"></i>
             <span>Inject</span>
           </button>
+          <button id="toggleConsoleBtn" class="toolbar-btn" title="显示/隐藏控制台">
+            <i class="ri-terminal-box-line"></i>
+            <span>Console</span>
+          </button>
         </div>
 
         <div class="nav-right">
-           <!-- 状态检测按钮 -->
-           <button id="checkPageStatusBtn" class="icon-btn" title="刷新状态">
-             <i class="ri-refresh-line"></i>
-           </button>
-           
-           <!-- 分隔线 -->
-           <div class="nav-divider"></div>
+          <!-- 状态检测按钮 -->
+          <button id="checkPageStatusBtn" class="icon-btn" title="刷新状态">
+            <i class="ri-refresh-line"></i>
+          </button>
 
-           <!-- 状态指示器 -->
-           <div class="status-indicator-group" id="pageStatusItem">
-              <span class="status-dot" id="statusPageDot"></span>
-              <span class="status-text" id="statusPageText">Ready</span>
-           </div>
-           
-           <!-- 隐藏的连接状态 -->
-           <div id="connectionStatusItem" style="display:none;">
-             <span id="statusConnectionDot"></span>
-             <span id="statusConnectionText"></span>
-           </div>
+          <!-- 分隔线 -->
+          <div class="nav-divider"></div>
+
+          <!-- 状态指示器 -->
+          <div class="status-indicator-group" id="pageStatusItem">
+            <span class="status-dot" id="statusPageDot"></span>
+            <span class="status-text" id="statusPageText">Ready</span>
+          </div>
+
+          <!-- 隐藏的连接状态 -->
+          <div id="connectionStatusItem" style="display:none;">
+            <span id="statusConnectionDot"></span>
+            <span id="statusConnectionText"></span>
+          </div>
         </div>
       </header>
 
@@ -63,13 +69,33 @@
       <!-- 工作区主体 (Canvas + Right Panel) -->
       <div class="workspace-body">
         <!-- 3. 中间画布/列表 (Main Canvas) -->
-        <div class="content-area" id="taskList">
-          <div class="empty-state" id="emptyState">
-            <div class="empty-icon">
-              <i class="ri-clipboard-line" style="font-size: 48px;"></i>
+        <div class="content-area">
+          <!-- 搜索栏 -->
+          <div class="search-bar" id="searchBar">
+            <i class="ri-search-line search-icon"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="搜索任务...">
+            <button id="clearSearchBtn" class="clear-search-btn" style="display: none;">
+              <i class="ri-close-line"></i>
+            </button>
+          </div>
+          <!-- 任务列表容器 -->
+          <div class="task-list-container" id="taskList">
+            <div class="empty-state" id="emptyState">
+              <div class="empty-icon">
+                <i class="ri-clipboard-line" style="font-size: 48px;"></i>
+              </div>
+              <p>No tasks yet</p>
+              <button class="btn-ghost" onclick="document.getElementById('addTaskBtn').click()">Create one</button>
             </div>
-            <p>No tasks yet</p>
-            <button class="btn-ghost" onclick="document.getElementById('addTaskBtn').click()">Create one</button>
+          </div>
+
+          <!-- 快捷录入栏 -->
+          <div class="quick-input-bar" id="quickInputBar">
+            <textarea id="quickInput" class="quick-input-textarea"
+              placeholder="输入任务，Enter 提交，Shift+Enter 换行，-------- 分隔多步骤" rows="1"></textarea>
+            <button id="quickSubmitBtn" class="quick-submit-btn" title="提交 (Enter)">
+              <i class="ri-send-plane-fill"></i>
+            </button>
           </div>
         </div>
 
@@ -114,21 +140,12 @@
             提示词
             <span style="color: #666; font-size: 12px;">(使用 -------- 分隔多个步骤)</span>
           </label>
-          <textarea
-            id="promptInput"
-            class="form-control"
-            rows="8"
+          <textarea id="promptInput" class="form-control" rows="8"
             placeholder="请输入提示词内容...&#10;&#10;提示：使用 -------- 分隔多个步骤，任务将逐步执行"></textarea>
         </div>
         <div class="form-group">
           <label for="maxRetriesInput">最大重试次数</label>
-          <input
-            type="number"
-            id="maxRetriesInput"
-            class="form-control"
-            value="3"
-            min="0"
-            max="10">
+          <input type="number" id="maxRetriesInput" class="form-control" value="3" min="0" max="10">
         </div>
       </div>
       <div class="modal-footer">
@@ -140,4 +157,5 @@
 
   <script type="module" src="sidepanel.js"></script>
 </body>
+
 </html>
