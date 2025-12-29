@@ -407,9 +407,22 @@ async function executeTask(task: Task) {
     console.log(`[Background] 检测到激活的网站: ${siteType}, Tab ID: ${tabId}`);
 
     // 确认目标页面已就绪
-    const check = await handleCheckContentScript();
+    let check = await handleCheckContentScript();
     if (!check.connected) {
-      throw new Error(`无法连接到 ${siteType} 页面，请尝试刷新该页面或使用“手动注入”功能。`);
+      console.log('[Background] Content script 未连接，尝试自动注入...');
+      
+      // 尝试自动注入
+      const injectResult = await handleManualInject();
+      if (injectResult.success) {
+        console.log('[Background] 自动注入成功，重新检查连接...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        check = await handleCheckContentScript();
+      }
+      
+      // 如果仍然未连接，则失败
+      if (!check.connected) {
+        throw new Error(`无法连接到 ${siteType} 页面。已尝试自动注入但失败，请手动刷新该页面。`);
+      }
     }
 
     // 将运行时检测到的 siteType 附加到任务上，用于本次执行

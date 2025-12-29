@@ -44,6 +44,7 @@ const manualPageStatusBtnDefaultHtml = checkPageStatusBtn.innerHTML;
 const debugContent = document.getElementById('debugContent') as HTMLDivElement;
 const logPanel = document.getElementById('logPanel') as HTMLElement;
 const toggleConsoleBtn = document.getElementById('toggleConsoleBtn') as HTMLButtonElement;
+const viewToggleBtn = document.getElementById('viewToggleBtn') as HTMLButtonElement;
 
 // 表单元素
 const taskTypeSelect = document.getElementById('taskTypeSelect') as HTMLSelectElement;
@@ -118,6 +119,11 @@ if (quickSubmitBtn) {
   quickSubmitBtn.addEventListener('click', handleQuickSubmit);
 }
 
+// 视图切换事件监听
+if (viewToggleBtn) {
+  viewToggleBtn.addEventListener('click', toggleViewMode);
+}
+
 // 初始化
 setManualPageStatusCheckEnabled(false);
 manualInjectBtn.disabled = true;
@@ -127,6 +133,7 @@ init();
 async function init() {
   await loadTasks();
   await initConsoleState(); // 加载并应用控制台显示状态
+  await initViewState(); // 加载并应用视图模式状态
 
   // 检测连接状态
   checkConnectionStatus();
@@ -1114,4 +1121,27 @@ async function initConsoleState() {
 
   logPanel.classList.toggle('hidden', !isVisible);
   toggleConsoleBtn.classList.toggle('active', isVisible);
+}
+
+/**
+ * 切换视图模式 (紧凑/展开)
+ */
+async function toggleViewMode() {
+  const isExpanded = document.body.classList.toggle('expanded-mode');
+  viewToggleBtn.classList.toggle('expanded', isExpanded);
+
+  // 保存状态
+  await chrome.storage.local.set({ viewExpanded: isExpanded });
+}
+
+/**
+ * 初始化视图模式状态
+ */
+async function initViewState() {
+  const result = await chrome.storage.local.get('viewExpanded');
+  // 默认紧凑模式 (false or undefined)
+  const isExpanded = result.viewExpanded === true;
+
+  document.body.classList.toggle('expanded-mode', isExpanded);
+  viewToggleBtn.classList.toggle('expanded', isExpanded);
 }

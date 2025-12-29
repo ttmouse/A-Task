@@ -275,7 +275,8 @@ body {
   flex: 1;
   overflow: hidden;
   /* Prevent double scrollbar - let task-list-container scroll */
-  padding: 24px;
+  padding: 12px;
+  /* Reduced from 24px for compact layout */
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -452,15 +453,17 @@ body {
 .task-item {
   background-color: var(--bg-panel);
   border-radius: var(--radius);
-  padding: 12px;
-  margin-bottom: 8px;
+  padding: 8px;
+  /* Reduced from 12px */
+  margin-bottom: 4px;
+  /* Reduced from 8px */
   box-shadow: var(--shadow-panel);
   border: 1px solid transparent;
-  /* Prepare for selection */
   transition: var(--transition-fast);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
+  /* Reduced from 8px */
 }
 
 .task-item:hover {
@@ -505,18 +508,17 @@ body {
 .task-content {
   font-size: 12px;
   color: var(--text-main);
-  line-height: 1.5;
+  line-height: 1.4;
   font-weight: 400;
-  /* Regular */
-
-  /* Text Truncation */
+  /* Text Truncation - 1 line for compact */
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 8px;
+  margin-bottom: 0;
+  /* Reduced from 8px */
 }
 
 /* Task Steps Preview */
@@ -909,8 +911,8 @@ textarea.form-control {
   border-top: 1px solid var(--border-subtle);
   border-radius: var(--radius) var(--radius) 0 0;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
-  margin: 16px -24px -24px -24px;
-  /* Extend to parent edges */
+  margin: 12px -12px -12px -12px;
+  /* Match content-area 12px padding */
 }
 
 .quick-input-textarea {
@@ -983,4 +985,39 @@ textarea.form-control {
 .content-area {
   padding-bottom: 0;
   /* Quick input bar will handle bottom spacing */
+}
+
+/* ===== Compact Mode ===== */
+/* Default: compact mode (hide steps and meta) */
+.task-steps-preview {
+  display: none;
+}
+
+.task-meta {
+  display: none;
+}
+
+/* Expanded mode: show everything */
+body.expanded-mode .task-steps-preview {
+  display: flex;
+}
+
+body.expanded-mode .task-meta {
+  display: flex;
+}
+
+body.expanded-mode .task-content {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+body.expanded-mode .task-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+/* View Toggle Button Active State */
+.toolbar-btn.view-toggle.expanded i {
+  color: var(--primary);
 }
