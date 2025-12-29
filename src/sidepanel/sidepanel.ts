@@ -1,3 +1,8 @@
+// [IN]: TaskStorage, chrome.runtime messages, DOM Events
+// [OUT]: DOM Rendering, User Interaction Handling
+// [POS]: UI Layer / Side Panel Controller
+// Protocol: When updated, sync this header + src/sidepanel/.folder.md
+
 import { TaskStorage } from '../storage/task-storage.js';
 import { Task, TaskStatus, TaskType, SiteType, TaskStep } from '../types/task.js';
 
@@ -900,8 +905,8 @@ function handleQuickInputKeydown(e: KeyboardEvent) {
 function handleQuickInputResize() {
   // Reset height to auto to get the correct scrollHeight
   quickInput.style.height = 'auto';
-  // Set to scrollHeight but cap at max-height (handled by CSS)
-  quickInput.style.height = Math.min(quickInput.scrollHeight, 120) + 'px';
+  // Set to scrollHeight but cap at max-height (500px matches CSS)
+  quickInput.style.height = Math.min(quickInput.scrollHeight, 500) + 'px';
 }
 
 /**

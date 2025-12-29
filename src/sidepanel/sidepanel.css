@@ -58,6 +58,8 @@ body {
   display: flex;
   height: 100%;
   width: 100%;
+  container-type: inline-size;
+  container-name: sidepanel;
 }
 
 /* Left Sidebar (Removed) */
@@ -165,6 +167,44 @@ body {
   color: var(--primary);
 }
 
+/* Responsive: Hide text labels when panel is narrow */
+@container (max-width: 400px) {
+  .toolbar-btn span {
+    display: none;
+  }
+
+  .toolbar-btn {
+    padding: 6px 8px;
+  }
+
+  .status-text {
+    display: none;
+  }
+
+  .status-indicator-group {
+    padding: 6px;
+  }
+}
+
+/* Fallback for browsers without container queries */
+@media (max-width: 400px) {
+  .toolbar-btn span {
+    display: none;
+  }
+
+  .toolbar-btn {
+    padding: 6px 8px;
+  }
+
+  .status-text {
+    display: none;
+  }
+
+  .status-indicator-group {
+    padding: 6px;
+  }
+}
+
 .nav-right {
   display: flex;
   align-items: center;
@@ -233,7 +273,8 @@ body {
 /* Main Content Area (Canvas) */
 .content-area {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
+  /* Prevent double scrollbar - let task-list-container scroll */
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -758,13 +799,14 @@ textarea.form-control {
   background-color: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius);
-  padding: 8px 12px;
-  margin-bottom: 16px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  /* Reduced from 16px */
   gap: 8px;
   transition: var(--transition-fast);
   flex-shrink: 0;
-  height: 36px;
-  /* Fixed height to prevent resize */
+  height: 32px;
+  /* Reduced from 36px */
 }
 
 .search-bar:focus-within {
@@ -828,6 +870,10 @@ textarea.form-control {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  padding-right: 8px;
+  /* Space between scrollbar and task cards */
+  margin-right: -8px;
+  /* Compensate for content-area padding */
 }
 
 /* No Results State */
@@ -870,7 +916,8 @@ textarea.form-control {
 .quick-input-textarea {
   flex: 1;
   min-height: 36px;
-  max-height: 120px;
+  max-height: 500px;
+  /* Increased to allow more content */
   padding: 8px 12px;
   border: 1px solid transparent;
   border-radius: 18px;
@@ -882,7 +929,10 @@ textarea.form-control {
   resize: none;
   outline: none;
   transition: var(--transition-fast);
-  overflow-y: auto;
+  overflow: hidden;
+  /* No scrollbar - auto-expands instead */
+  field-sizing: content;
+  /* Modern CSS auto-resize */
 }
 
 .quick-input-textarea:hover:not(:focus) {
