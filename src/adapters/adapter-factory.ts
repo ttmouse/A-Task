@@ -1,4 +1,4 @@
-// INPUT: ../types/task.js (Task, SiteType), ./base-adapter.js, ./gemini-adapter.js, ./chatgpt-adapter.js
+// INPUT: ../types/task.js (Task, SiteType), ./base-adapter.js, ./gemini-adapter.js, ./chatgpt-adapter.js, ./oiioii-adapter.js
 // OUTPUT: AdapterFactory 类，提供 create() 方法根据站点类型创建适配器实例
 // POS: 适配器层工厂类，被 TaskExecutor 和其他需要创建适配器的模块调用
 // 一旦本文件被修改，请更新此注释并同步更新 /src/adapters/README.md
@@ -7,6 +7,7 @@ import { Task, SiteType } from '../types/task.js';
 import { BaseAdapter } from './base-adapter.js';
 import { GeminiAdapter } from './gemini-adapter.js';
 import { ChatGPTAdapter } from './chatgpt-adapter.js';
+import { OiioiiAdapter } from './oiioii-adapter.js';
 
 // AIDEV-NOTE: 适配器工厂
 // 根据网站类型创建对应的适配器实例
@@ -25,6 +26,9 @@ export class AdapterFactory {
       case SiteType.CHATGPT:
         return new ChatGPTAdapter(task);
 
+      case SiteType.OIIOII:
+        return new OiioiiAdapter(task);
+
       default:
         throw new Error(`不支持的网站类型: ${siteType}`);
     }
@@ -36,7 +40,7 @@ export class AdapterFactory {
    * @returns 是否支持
    */
   static isSupported(siteType: SiteType): boolean {
-    return [SiteType.GEMINI, SiteType.CHATGPT].includes(siteType);
+    return [SiteType.GEMINI, SiteType.CHATGPT, SiteType.OIIOII].includes(siteType);
   }
 
   /**
@@ -44,6 +48,6 @@ export class AdapterFactory {
    * @returns 支持的网站类型列表
    */
   static getSupportedSites(): SiteType[] {
-    return [SiteType.GEMINI, SiteType.CHATGPT];
+    return [SiteType.GEMINI, SiteType.CHATGPT, SiteType.OIIOII];
   }
 }

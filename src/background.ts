@@ -140,7 +140,8 @@ async function getActiveSupportedSite(): Promise<{ siteType: SiteType, tabId: nu
   // AIDEV-NOTE: 使用数组来支持一个网站有多个域名
   const siteUrlPatterns: Record<SiteType, string[]> = {
     [SiteType.GEMINI]: ['https://gemini.google.com/'],
-    [SiteType.CHATGPT]: ['https://chat.openai.com/', 'https://chatgpt.com/']
+    [SiteType.CHATGPT]: ['https://chat.openai.com/', 'https://chatgpt.com/'],
+    [SiteType.OIIOII]: ['https://oiioii.ai/', 'https://www.oiioii.ai/']
   };
 
   try {
@@ -245,7 +246,7 @@ async function handleRequestPageStatus(): Promise<{
     if (!activeSite) {
       return {
         success: false,
-        error: '当前激活的标签页不是受支持的 AI 网站 (ChatGPT or Gemini)。'
+        error: '当前激活的标签页不是受支持的 AI 网站 (ChatGPT, Gemini 或 OIIOII)。'
       };
     }
 
@@ -400,7 +401,7 @@ async function executeTask(task: Task) {
     const activeSite = await getActiveSupportedSite();
 
     if (!activeSite) {
-      throw new Error(`请先打开并激活一个受支持的 AI 网站页面 (ChatGPT 或 Gemini)。`);
+      throw new Error(`请先打开并激活一个受支持的 AI 网站页面 (ChatGPT, Gemini 或 OIIOII)。`);
     }
 
     const { siteType, tabId } = activeSite;
@@ -410,7 +411,7 @@ async function executeTask(task: Task) {
     let check = await handleCheckContentScript();
     if (!check.connected) {
       console.log('[Background] Content script 未连接，尝试自动注入...');
-      
+
       // 尝试自动注入
       const injectResult = await handleManualInject();
       if (injectResult.success) {
@@ -418,7 +419,7 @@ async function executeTask(task: Task) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         check = await handleCheckContentScript();
       }
-      
+
       // 如果仍然未连接，则失败
       if (!check.connected) {
         throw new Error(`无法连接到 ${siteType} 页面。已尝试自动注入但失败，请手动刷新该页面。`);
@@ -474,7 +475,8 @@ async function executeTask(task: Task) {
 async function sendMessageToContentScript(siteType: SiteType, message: any, retries = 3): Promise<any> {
   const siteUrlPatterns: Record<SiteType, string[]> = {
     [SiteType.GEMINI]: ['https://gemini.google.com/*'],
-    [SiteType.CHATGPT]: ['https://chat.openai.com/*', 'https://chatgpt.com/*']
+    [SiteType.CHATGPT]: ['https://chat.openai.com/*', 'https://chatgpt.com/*'],
+    [SiteType.OIIOII]: ['https://oiioii.ai/*', 'https://www.oiioii.ai/*']
   };
 
   const urlPattern = siteUrlPatterns[siteType];

@@ -14,7 +14,9 @@
   "host_permissions": [
     "https://gemini.google.com/*",
     "https://chat.openai.com/*",
-    "https://chatgpt.com/*"
+    "https://chatgpt.com/*",
+    "https://oiioii.ai/*",
+    "https://www.oiioii.ai/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -25,9 +27,13 @@
       "matches": [
         "https://gemini.google.com/*",
         "https://chat.openai.com/*",
-        "https://chatgpt.com/*"
+        "https://chatgpt.com/*",
+        "https://oiioii.ai/*",
+        "https://www.oiioii.ai/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -47,7 +53,9 @@
         "pages/sidepanel/sidepanel.css",
         "pages/guide-simple.html"
       ],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "icons": {

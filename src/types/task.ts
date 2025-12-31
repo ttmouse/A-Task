@@ -15,7 +15,8 @@ export enum TaskType {
 // 支持的网站
 export enum SiteType {
   GEMINI = 'gemini',
-  CHATGPT = 'chatgpt'
+  CHATGPT = 'chatgpt',
+  OIIOII = 'oiioii'
 }
 
 // AIDEV-NOTE: 任务步骤接口 - 支持多步骤任务

@@ -17,6 +17,10 @@ function getCurrentSiteType(): SiteType | undefined {
   if (location.hostname.includes('gemini.google.com')) {
     return SiteType.GEMINI;
   }
+  // OIIOII 域名检测
+  if (location.hostname.includes('oiioii.ai') || location.hostname.includes('hogiai')) {
+    return SiteType.OIIOII;
+  }
   return undefined;
 }
 
